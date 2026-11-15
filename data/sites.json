@@ -1,0 +1,195 @@
+{
+ "jezero": {
+  "name": "Jezero Crater",
+  "lat": 18.4447,
+  "lon": 77.4508,
+  "ready": true,
+  "mission": "Perseverance (Mars 2020)",
+  "rover": "Perseverance",
+  "solEpoch": 52304,
+  "blurb": "Ancient lake with a river delta: clays and carbonates that may preserve signs of past life.",
+  "baseName": "Habitat (Perseverance landing site)",
+  "climate": {
+   "src": "MEDA (Perseverance) climatology",
+   "airMin": [
+    -88,
+    -78
+   ],
+   "airMax": [
+    -25,
+    -8
+   ],
+   "gndMax": [
+    2,
+    18
+   ],
+   "tau": 0.55,
+   "press": [
+    6.3,
+    7.8
+   ]
+  },
+  "targets": [
+   {
+    "id": "T1",
+    "x": -450,
+    "z": -400,
+    "on": true,
+    "tag": "Optical + DTM",
+    "name": "Delta-front cliff-base outcrop",
+    "why": "The ~26\u00b0 cliff cuts through delta sediments and exposes ancient lake layers. Its base is covered by dark ripples, so reaching it means crossing soft sand."
+   },
+   {
+    "id": "T2",
+    "x": 440,
+    "z": 440,
+    "on": true,
+    "tag": "Topography \u00b7 DTM",
+    "name": "Crater-rim ejecta",
+    "why": "A ~350 m impact crater brought deep rock to the surface, so several layers can be sampled in one stop."
+   },
+   {
+    "id": "T3",
+    "x": 20,
+    "z": -980,
+    "on": false,
+    "tag": "CRISM + DTM",
+    "name": "Delta-top sediments",
+    "why": "The delta top is ~100 m above the plains; the planner decides whether it can be climbed safely."
+   },
+   {
+    "id": "T4",
+    "x": -205,
+    "z": -655,
+    "on": false,
+    "tag": "THEMIS + Roughness",
+    "name": "Dark ripple field below the cliff",
+    "why": "Low night-time temperature in THEMIS (low thermal inertia) plus dark, smooth texture: loose sand where a rover can bog down."
+   }
+  ]
+ },
+ "gale": {
+  "name": "Gale Crater",
+  "lat": -4.685,
+  "lon": 137.388,
+  "ready": true,
+  "mission": "Curiosity (MSL)",
+  "rover": "Curiosity",
+  "solEpoch": 49269,
+  "blurb": "Foot of Mount Sharp: layered mudstones of an old lake and the active Bagnold dune field.",
+  "baseName": "Habitat (Murray formation plains)",
+  "climate": {
+   "src": "REMS (Curiosity) climatology",
+   "airMin": [
+    -90,
+    -75
+   ],
+   "airMax": [
+    -15,
+    0
+   ],
+   "gndMax": [
+    5,
+    20
+   ],
+   "tau": 0.5,
+   "press": [
+    7.3,
+    9.2
+   ]
+  },
+  "targets": [
+   {
+    "id": "G1",
+    "x": -130,
+    "z": -340,
+    "on": true,
+    "tag": "THEMIS + Optical",
+    "name": "Bagnold dune field edge",
+    "why": "An active basaltic dune: darkest in HiRISE and coldest at night in THEMIS (loose sand). CRISM shows olivine, as Curiosity measured at Namib Dune."
+   },
+   {
+    "id": "G2",
+    "x": 590,
+    "z": 800,
+    "on": true,
+    "tag": "DTM + Optical",
+    "name": "Murray formation bedrock",
+    "why": "Pale lake mudstone ~170 m up the lower slopes of Mount Sharp; the climb dominates the energy budget."
+   },
+   {
+    "id": "G3",
+    "x": 40,
+    "z": -590,
+    "on": false,
+    "tag": "Roughness",
+    "name": "Fractured butte margin",
+    "why": "The roughest ground on the map: boulders and fractures. A good test of whether the planner refuses a route."
+   },
+   {
+    "id": "G4",
+    "x": -1030,
+    "z": -1120,
+    "on": false,
+    "tag": "Rover traverse",
+    "name": "Marias Pass (Curiosity, sols ~990\u20131060)",
+    "why": "Curiosity drove through here in 2015 and drilled the 'Buckskin' sample nearby. Real rover photos are pinned around it."
+   }
+  ],
+  "base": [
+   -450,
+   -240
+  ]
+ },
+ "others": [
+  {
+   "name": "Gusev Crater",
+   "lat": -14.57,
+   "lon": 175.47,
+   "mission": "Spirit (MER-A)",
+   "dtms": "HiRISE DTMs available (Columbia Hills)"
+  },
+  {
+   "name": "Meridiani Planum",
+   "lat": -1.95,
+   "lon": 354.47,
+   "mission": "Opportunity (MER-B)",
+   "dtms": "HiRISE DTMs available (Endeavour rim)"
+  },
+  {
+   "name": "Utopia Planitia",
+   "lat": 25.07,
+   "lon": 109.93,
+   "mission": "Zhurong (Tianwen-1)",
+   "dtms": "CTX DTMs available"
+  },
+  {
+   "name": "Elysium Planitia",
+   "lat": 4.5,
+   "lon": 135.62,
+   "mission": "InSight",
+   "dtms": "HiRISE DTMs available"
+  },
+  {
+   "name": "Chryse Planitia",
+   "lat": 19.13,
+   "lon": 326.22,
+   "mission": "Pathfinder \u00b7 Viking 1",
+   "dtms": "HiRISE DTMs available"
+  },
+  {
+   "name": "Green Valley (north polar plains)",
+   "lat": 68.22,
+   "lon": 234.25,
+   "mission": "Phoenix",
+   "dtms": "HiRISE DTMs available"
+  },
+  {
+   "name": "Arcadia Planitia",
+   "lat": 40.0,
+   "lon": 200.0,
+   "mission": "Candidate human landing site (ice)",
+   "dtms": "CTX DTMs available"
+  }
+ ]
+}

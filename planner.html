@@ -1,0 +1,1573 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Marswalk Planner</title>
+<style>
+  :root{
+    --bg:#0f0b0a; --panel:#16100eee; --card:#211814; --card2:#2b201b; --sunk:#110c0a; --line:#3a2b24; --hair:#ffffff0d;
+    --text:#f5eae1; --muted:#a8968a; --faint:#7a6a60;
+    --accent:#4fd6ff; --ink:#04212b; --warn:#ffb547; --bad:#ff6b6b; --good:#5cf29a; --gold:#ffd34f;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font:13px/1.45 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",system-ui,sans-serif;overflow:hidden}
+  #app{position:fixed;inset:0}
+  canvas.three{display:block}
+  button{font:inherit;color:inherit}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ================= planning panel ================= */
+  #panel{position:absolute;top:12px;left:12px;bottom:12px;width:388px;max-width:calc(100vw - 24px);background:var(--panel);
+    border:1px solid var(--line);border-radius:18px;z-index:5;display:flex;flex-direction:column;overflow:hidden;
+    backdrop-filter:blur(10px);box-shadow:0 20px 50px #0008;transition:transform .25s ease}
+  body.collapsed #panel{transform:translateX(calc(-100% - 24px))}
+  .p-head{padding:14px 14px 10px}
+  .brand{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .brand .logo{width:26px;height:26px;border-radius:8px;background:conic-gradient(from 200deg,#ff8a4c,#c2452d,#5a1e14,#ff8a4c);box-shadow:inset 0 0 0 1px #fff2}
+  .brand b{font-size:15px;letter-spacing:.3px}
+  .brand .sp{flex:1}
+  .ghost{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:5px 9px;cursor:pointer;font-size:12px;color:var(--text);text-decoration:none}
+  .ghost:hover{border-color:#5a463c}
+  .site{border-radius:14px;padding:12px 14px;border:1px solid var(--hair);background-size:cover;background-position:center;position:relative;overflow:hidden}
+  .site h1{margin:0;font-size:19px;letter-spacing:.2px}
+  .site .meta{color:#e6d6ca;font-size:12px;opacity:.85}
+  .badges{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+  .badge{font-size:10px;padding:2px 7px;border-radius:999px;background:#0008;border:1px solid #ffffff22;color:#e9ddd4;white-space:nowrap}
+  .badge.r{border-color:#5cf29a66;color:#9ff7c3}
+  .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin:12px 14px 0;background:var(--sunk);padding:3px;border-radius:11px}
+  .tabs button{background:none;border:0;border-radius:8px;padding:7px 0;cursor:pointer;color:var(--muted);font-weight:600;font-size:12px}
+  .tabs button.on{background:var(--card2);color:var(--text);box-shadow:0 1px 0 #ffffff10 inset}
+  .p-body{flex:1;overflow:auto;padding:12px 14px 14px;display:flex;flex-direction:column;gap:12px;scrollbar-width:thin}
+  .p-body section{display:none;flex-direction:column;gap:12px}
+  .p-body section.on{display:flex}
+  .card{background:var(--card);border:1px solid var(--hair);border-radius:14px;padding:12px}
+  .card-t{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+  .card-t h2{margin:0;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .card-t .r{margin-left:auto;font-size:11px;color:var(--faint)}
+  .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:2px;background:var(--sunk);padding:3px;border-radius:10px}
+  .seg button{border:0;background:none;padding:7px 4px;border-radius:7px;cursor:pointer;color:var(--muted);font-size:12px;font-weight:600}
+  .seg button.on{background:var(--accent);color:var(--ink)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .lbl{font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:1px;margin:0 0 4px 2px}
+  .hint{font-size:11px;color:var(--muted)}
+  /* targets */
+  .tgt{display:grid;grid-template-columns:18px 1fr auto;gap:8px;align-items:start;padding:8px 6px;border-radius:10px;cursor:pointer}
+  .tgt:hover{background:#ffffff06}
+  .tgt input{margin:2px 0 0;accent-color:var(--accent)}
+  .tgt .n{font-weight:600;font-size:12.5px}
+  .tgt .id{display:inline-block;min-width:22px;text-align:center;font-size:10px;font-weight:700;border-radius:5px;background:var(--gold);color:#2a1d00;margin-right:6px;padding:0 4px}
+  .tgt.off .id{background:#5b4c43;color:#d8c8bc}
+  .tgt .d{font-size:11px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:2px}
+  .tgt .tag{font-size:10px;color:var(--accent);margin-left:4px;opacity:.85}
+  .tgt button{background:none;border:0;color:var(--faint);cursor:pointer;padding:0 2px}
+  /* time slider */
+  .timebox{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}
+  .clock{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  #dayBar{width:100%;height:30px;display:block;margin-top:6px;border-radius:8px}
+  .mini-btns{display:flex;gap:6px;margin-top:8px}
+  .mini-btns button{flex:1}
+  /* summary */
+  .verdict{display:block;padding:9px 11px;border-radius:11px;font-weight:700;font-size:13px;margin-bottom:10px}
+  .verdict small{font-weight:500;opacity:.85;font-size:11.5px;display:block;margin-top:2px}
+  .verdict.go{background:#0f3622;color:var(--good)}
+  .verdict.caution{background:#3d2a0c;color:var(--warn)}
+  .verdict.nogo{background:#461416;color:#ffb3b3}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .kpi{background:var(--sunk);border-radius:10px;padding:7px 9px}
+  .kpi .k{font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.6px}
+  .kpi .v{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .risks{margin-top:10px;display:flex;flex-direction:column;gap:2px}
+  .risk{display:grid;grid-template-columns:16px 1fr auto;gap:8px;align-items:center;font-size:12px;padding:4px 2px}
+  .risk i{width:8px;height:8px;border-radius:50%;display:block;margin-left:4px}
+  .risk .v{font-variant-numeric:tabular-nums;color:var(--muted)}
+  .dot-g{background:var(--good)} .dot-w{background:var(--warn)} .dot-b{background:var(--bad)}
+  .cmp{font-size:11px;color:var(--muted);margin-top:8px}
+  #profile{width:100%;height:112px;display:block;background:var(--sunk);border-radius:10px;cursor:crosshair}
+  .legend-row{display:flex;flex-wrap:wrap;gap:10px;font-size:10.5px;color:var(--muted);margin-top:6px}
+  .legend-row i{display:inline-block;width:12px;height:4px;border-radius:2px;margin-right:4px;vertical-align:2px}
+  /* layers */
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .tile{background:var(--sunk);border:1px solid transparent;border-radius:11px;padding:8px 9px;text-align:left;cursor:pointer}
+  .tile .sw{height:6px;border-radius:3px;margin-bottom:7px}
+  .tile .n{font-weight:600;font-size:12px}
+  .tile .b{font-size:9.5px;font-weight:700;letter-spacing:.6px}
+  .tile.on{border-color:var(--accent);background:#10232a}
+  .b.real{color:var(--good)} .b.model{color:var(--warn)}
+  .legend{font-size:11.5px;color:var(--muted)}
+  .legend .bar{height:8px;border-radius:4px;margin:6px 0 4px}
+  .legend .cats{display:flex;flex-wrap:wrap;gap:6px 10px;margin-top:6px}
+  .legend .cats i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  .src{font-size:10.5px;color:var(--faint);margin-top:8px;border-top:1px solid var(--hair);padding-top:8px}
+  .tog{display:flex;align-items:center;gap:8px;padding:5px 2px;font-size:12px;cursor:pointer}
+  .tog input{accent-color:var(--accent)}
+  /* environment */
+  .now{display:grid;grid-template-columns:1fr auto;align-items:end}
+  .now .big{font-size:30px;font-weight:800;letter-spacing:.5px;font-variant-numeric:tabular-nums;line-height:1}
+  #envChart{width:100%;height:150px;display:block;background:var(--sunk);border-radius:10px;margin-top:2px}
+  .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .btn{width:100%;padding:11px;border-radius:11px;border:0;background:var(--accent);color:var(--ink);font-weight:800;font-size:13.5px;cursor:pointer;letter-spacing:.2px}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn.alt{background:#35191a;color:#ffb3b3;border:1px solid #6a2a2a;font-weight:700}
+  .btn.alt.on{background:var(--bad);color:#fff}
+  #speBanner{display:none;margin-top:8px;color:#ffd0d0;font-size:11.5px}
+  .p-foot{padding:12px 14px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr auto;gap:8px;background:#120d0bcc;position:relative}
+  .p-foot .ghost{padding:0 14px;font-size:16px}
+  #exportMenu{position:absolute;right:14px;bottom:60px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:6px;display:none;min-width:210px;box-shadow:0 10px 30px #000a}
+  #exportMenu button{display:block;width:100%;text-align:left;background:none;border:0;padding:8px 10px;border-radius:8px;cursor:pointer}
+  #exportMenu button:hover{background:#ffffff0c}
+
+  /* ================= map overlays ================= */
+  .fab{position:absolute;z-index:7;background:var(--panel);border:1px solid var(--line);color:var(--text);
+    border-radius:11px;cursor:pointer;backdrop-filter:blur(8px);font-size:12.5px}
+  #panelToggle{top:12px;left:412px;padding:8px 11px;transition:left .25s ease}
+  body.collapsed #panelToggle{left:12px}
+  #pegman{right:20px;bottom:20px;width:56px;height:56px;border-radius:50%;font-size:28px;touch-action:none;
+    display:flex;align-items:center;justify-content:center;user-select:none}
+  #pegman:hover{border-color:var(--warn)}
+  #pegTip{position:absolute;right:84px;bottom:36px;z-index:7;font-size:11px;color:var(--muted);pointer-events:none}
+  #pegGhost{position:fixed;z-index:30;font-size:34px;pointer-events:none;display:none;transform:translate(-50%,-90%)}
+  #pegInfo,#profTip{position:fixed;z-index:30;pointer-events:none;display:none;font-size:11px;background:#000c;border:1px solid var(--warn);
+    border-radius:6px;padding:3px 7px;transform:translate(14px,8px);white-space:nowrap}
+  #profTip{border-color:var(--accent)}
+  body.fp .fab, body.fp #pegTip{display:none}
+  body.bigmap #pegman{z-index:9}
+  .label{position:absolute;transform:translate(-50%,-120%);pointer-events:none;font-size:11px;white-space:nowrap;
+    background:#000a;border:1px solid #fff3;border-radius:6px;padding:2px 6px;z-index:3}
+  .label b{color:var(--gold)}
+  .label.base b{color:#fff}
+  .label.pnr{border-color:var(--bad);color:#ffc2c2}
+  #photoCard{position:absolute;right:20px;top:20px;width:min(420px,calc(100vw - 40px));z-index:12;background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;overflow:hidden;display:none;box-shadow:0 20px 50px #000b}
+  body.fp #photoCard{top:110px;width:min(380px,calc(100vw - 40px))}
+  #photoCard img{width:100%;display:block;background:#000;max-height:60vh;object-fit:contain}
+  #photoCard .cap{padding:10px 12px;font-size:12px}
+  #photoCard .cap b{font-size:13px}
+  #photoCard .x{position:absolute;right:8px;top:8px;background:#000a;border:1px solid #fff3;border-radius:8px;cursor:pointer;padding:2px 8px}
+  #photoCard a{color:var(--accent)}
+
+  /* ================= HUD (helmet visor) ================= */
+  #hud{position:absolute;inset:0;pointer-events:none;display:none;z-index:6;font-variant-numeric:tabular-nums}
+  #visor{position:absolute;inset:0;background:radial-gradient(ellipse 75% 70% at 50% 48%,transparent 62%,#0008 82%,#000d 100%)}
+  .hud-c{color:#9ff3ff;text-shadow:0 0 6px #4fd6ff99}
+  #compass{position:absolute;top:22px;left:50%;transform:translateX(-50%)}
+  #hudL{position:absolute;left:5%;top:27%;width:200px}
+  #hudR{position:absolute;right:5%;top:27%;width:230px;text-align:right}
+  .meter{margin-bottom:11px}
+  .meter .k{font-size:11px;letter-spacing:1px;opacity:.8}
+  .meter .v{font-size:21px;font-weight:600}
+  .meter .b{height:5px;background:#9ff3ff33;border-radius:3px;margin-top:3px}
+  .meter .b i{display:block;height:100%;background:#9ff3ff;border-radius:3px}
+  .meter.low .v{color:#ffb3b3} .meter.low .b i{background:#ff6b6b}
+  #preview{display:none;white-space:nowrap;width:max-content;font-size:11px;letter-spacing:1px;border:1px solid #9ff3ff66;border-radius:6px;padding:4px 8px;margin-bottom:12px;background:#4fd6ff14}
+  #arrow{display:inline-block;font-size:34px;transition:transform .1s linear}
+  #hudB{position:absolute;bottom:7%;left:50%;transform:translateX(-50%);text-align:center;width:680px;max-width:90vw}
+  #warns div{display:inline-block;margin:3px;padding:4px 10px;border-radius:6px;font-weight:600;font-size:13px}
+  #warns .w{background:#ffb54733;color:var(--warn);border:1px solid #ffb54788;text-shadow:none}
+  #warns .x{background:#ff5a5a33;color:#ff9a9a;border:1px solid #ff5a5a99;text-shadow:none}
+  #warns .i{background:#4fd6ff22;color:#bff6ff;border:1px solid #4fd6ff77;text-shadow:none}
+  #timeChip{position:absolute;top:66px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;font-size:13px;
+    background:#00000055;border:1px solid #9ff3ff44;border-radius:999px;padding:3px 6px 3px 12px;pointer-events:auto}
+  #timeChip button{background:#4fd6ff22;border:1px solid #4fd6ff55;color:#bff6ff;border-radius:999px;cursor:pointer;padding:1px 8px;font-size:12px}
+  #ap{position:absolute;top:100px;left:50%;transform:translateX(-50%);font-size:12px;letter-spacing:2px;display:none;
+    background:#4fd6ff22;border:1px solid #4fd6ff88;padding:2px 10px;border-radius:4px}
+  #stuck{position:absolute;top:40%;left:50%;transform:translateX(-50%);width:340px;text-align:center;display:none;
+    background:#3a0d0dcc;border:1px solid #ff6b6b;border-radius:10px;padding:10px;color:#ffd0d0;text-shadow:none}
+  #stuck .b{height:6px;background:#ffffff22;border-radius:3px;margin-top:8px}
+  #stuck .b i{display:block;height:100%;width:0;background:#ffb547;border-radius:3px}
+  #mini{position:absolute;right:3%;bottom:5%;border-radius:50%;border:2px solid #9ff3ff66;background:#0008;pointer-events:auto;cursor:zoom-in}
+  #mini:hover{border-color:#9ff3ff}
+  #miniTip{position:absolute;right:3%;bottom:calc(5% - 18px);width:200px;text-align:center;font-size:11px;opacity:.7}
+  #endBtn{position:absolute;right:3%;top:22px;pointer-events:auto;background:#3a0d0dcc;border:1px solid #ff6b6b99;color:#ffd0d0;border-radius:8px;padding:5px 10px;cursor:pointer;font-size:12px;text-shadow:none}
+  #bigMap{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:8px;
+    background:#0b0807d9;pointer-events:auto;z-index:8}
+  #bigMap .bm-head{display:flex;align-items:center;gap:12px;width:min(86vw,82vh);color:var(--text);text-shadow:none}
+  #bigMap .bm-head .hint{flex:1}
+  .bm-btn{background:var(--accent);color:var(--ink);border:0;border-radius:8px;padding:6px 12px;font-weight:700;cursor:pointer}
+  #bigCanvas{width:min(86vw,82vh);height:min(86vw,82vh);border-radius:12px;border:1px solid #9ff3ff66;cursor:crosshair}
+  body.fp #pegman{display:flex;right:auto;left:20px;bottom:70px;width:48px;height:48px;font-size:24px}
+  #help{position:absolute;left:3%;bottom:4%;font-size:12px;opacity:.75;max-width:60vw}
+  #toast{position:absolute;top:21%;left:50%;transform:translateX(-50%);background:#06222ccc;border:1px solid #4fd6ff;
+    border-radius:10px;padding:10px 16px;max-width:540px;text-align:center;display:none}
+  #toast .t{font-size:16px;font-weight:700}
+  #toast .s{font-size:12px;opacity:.85}
+  #info{position:absolute;left:3%;top:12%;font-size:11px;display:none;background:#000a;border:1px solid #9ff3ff44;border-radius:8px;padding:6px 10px;line-height:1.6}
+
+  /* ================= debrief ================= */
+  #debrief{position:fixed;inset:0;z-index:25;background:#0a0706e0;display:none;align-items:center;justify-content:center;padding:16px}
+  .db{width:min(720px,100%);max-height:92vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 30px 80px #000}
+  .db-top{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center}
+  .grade{width:84px;height:84px;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800}
+  .grade b{font-size:38px;line-height:1}
+  .grade span{font-size:11px;opacity:.8}
+  .db h2{margin:0;font-size:20px}
+  .db table{width:100%;border-collapse:collapse;margin-top:14px;font-size:12.5px}
+  .db td,.db th{padding:6px 8px;border-bottom:1px solid var(--hair);text-align:right;font-variant-numeric:tabular-nums}
+  .db td:first-child,.db th:first-child{text-align:left;color:var(--muted)}
+  .db th{font-size:10.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.8px}
+  .timeline{margin-top:14px;font-size:12px;max-height:180px;overflow:auto;background:var(--sunk);border-radius:10px;padding:8px 10px}
+  .timeline div{padding:2px 0}
+  .timeline b{color:var(--accent);font-variant-numeric:tabular-nums;margin-right:8px}
+  .db-btns{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px}
+  .db-btns .ghost{padding:10px;text-align:center}
+  @media (max-width:640px){ .db-btns{grid-template-columns:1fr 1fr} #panelToggle{left:auto;right:12px} }
+</style>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+</head>
+<body>
+<div id="app"></div>
+
+<aside id="panel">
+  <div class="p-head">
+    <div class="brand"><div class="logo"></div><b>Marswalk</b><span class="hint">EVA planner</span><span class="sp"></span>
+      <a class="ghost" href="index.html" title="Back to the Mars globe">🌍 Globe</a></div>
+    <div class="site" id="siteCard">
+      <h1 id="siteName">—</h1>
+      <div class="meta" id="siteMeta"></div>
+      <div class="badges" id="siteBadges"></div>
+    </div>
+  </div>
+  <div class="tabs" id="tabs">
+    <button data-tab="plan" class="on">Plan</button><button data-tab="layers">Layers</button><button data-tab="env">Environment</button>
+  </div>
+  <div class="p-body">
+    <section data-tab="plan" class="on">
+      <div class="card">
+        <div class="row2">
+          <div><div class="lbl">Mobility</div><div class="seg" id="mobility"></div></div>
+          <div><div class="lbl">Route priority</div><div class="seg" id="profiles"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-t"><h2>Science stops</h2><span class="r">click map to add</span></div>
+        <div id="targets"></div>
+      </div>
+      <div class="card">
+        <div class="card-t"><h2>EVA start</h2><span class="r" id="solLbl"></span></div>
+        <div class="timebox"><span class="clock" id="startClock">09:00</span><input type="range" id="startSlider" min="0" max="24" step="0.25" value="9"><span class="hint">LTST</span></div>
+        <canvas id="dayBar" width="700" height="60"></canvas>
+        <div class="mini-btns"><button class="ghost" id="useRec">☀ Recommended window</button><button class="ghost" id="useNow">⏱ Mars time now</button></div>
+      </div>
+      <div class="card">
+        <div class="card-t"><h2>EVA budget</h2><span class="r" id="routeMsg"></span></div>
+        <div id="verdict"></div>
+        <div class="kpis" id="stats"></div>
+        <div class="risks" id="risks"></div>
+        <div class="cmp" id="cmp"></div>
+      </div>
+      <div class="card">
+        <div class="card-t"><h2>Elevation profile</h2><span class="r">hover to locate</span></div>
+        <canvas id="profile" width="700" height="220"></canvas>
+        <div class="legend-row"><span>Color = slope</span><span>◆ stop</span><span><i style="background:#8a8a8a"></i>no line of sight</span><span><i style="background:#ff6b6b"></i>beyond walk-back</span></div>
+        <div class="hint" style="margin-top:6px">How high and steep each part of the route is. Long red climbs cost time, O₂ and battery; flat stretches are where you make up time.</div>
+      </div>
+    </section>
+
+    <section data-tab="layers">
+      <div class="card">
+        <div class="card-t"><h2>Data layers</h2><span class="r">drapes the 3D terrain</span></div>
+        <div class="tiles" id="layers"></div>
+      </div>
+      <div class="card"><div class="legend" id="legend"></div></div>
+      <div class="card">
+        <div class="card-t"><h2>Overlays</h2></div>
+        <label class="tog"><input type="checkbox" id="togPhotos" checked> 📷 Real rover photos <span class="hint" id="photoCount"></span></label>
+        <label class="tog"><input type="checkbox" id="togAlt" checked> Comparison route (amber)</label>
+        <label class="tog"><input type="checkbox" id="togShadow" checked> Terrain shadows (sun position)</label>
+      </div>
+    </section>
+
+    <section data-tab="env">
+      <div class="card">
+        <div class="card-t"><h2>Now at <span id="envSite"></span></h2><span class="r" id="envSol"></span></div>
+        <div class="now"><div><div class="big" id="nowClock">--:--</div><div class="hint" id="nowSub"></div></div>
+          <div style="text-align:right"><div style="font-size:20px;font-weight:700" id="nowTemp">—</div><div class="hint">air temperature</div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-t"><h2>Sol forecast</h2><span class="r">LTST (local solar time)</span></div>
+        <canvas id="envChart" width="700" height="300"></canvas>
+        <div class="legend-row"><span><i style="background:#ffb547"></i>air</span><span><i style="background:#ff6b6b"></i>ground</span><span><i style="background:#5cf29a"></i>EVA window</span><span><i style="background:#4fd6ff"></i>your EVA</span></div>
+      </div>
+      <div class="card"><div class="metrics" id="envMetrics"></div><div class="src" id="envSrc"></div></div>
+      <div class="card">
+        <div class="card-t"><h2>Space weather</h2></div>
+        <button class="btn alt" id="speBtn">☢ Simulate solar particle event</button>
+        <div id="speBanner">Solar particle event: routes now prefer terrain shelter (cliffs, crater walls) and dose estimates are raised.</div>
+      </div>
+    </section>
+  </div>
+  <div class="p-foot">
+    <button class="btn" id="fpBtn">▶ Rehearse EVA in first person</button>
+    <button class="ghost" id="exportBtn" title="Export plan">⬇</button>
+    <div id="exportMenu">
+      <button id="expGeo">🗺 Route as GeoJSON (lat/lon)</button>
+      <button id="expPrint">🖨 Printable EVA card</button>
+    </div>
+  </div>
+</aside>
+
+<button id="panelToggle" class="fab" title="Collapse / expand panel">◀ Hide</button>
+<div id="pegman" class="fab" title="Drag onto the terrain (or the minimap) to open street view there">🧍</div>
+<div id="pegTip">Drag pegman onto the map → street view</div>
+<div id="pegGhost">🧍</div>
+<div id="pegInfo"></div>
+<div id="profTip"></div>
+<div id="labels"></div>
+<div id="photoCard"><button class="x" id="photoX">✕</button><img id="photoImg" alt="Rover photo"><div class="cap" id="photoCap"></div></div>
+<div id="glLost" style="position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:#120d0bee;flex-direction:column;gap:12px;text-align:center">
+  <div style="font-size:18px;font-weight:700">⚠ 3D rendering stopped (WebGL context lost)</div>
+  <div style="color:var(--muted);font-size:13px">The GPU context was reclaimed by the system, which is common with many open tabs or after sleep.</div>
+  <button class="btn" style="width:auto;padding:10px 24px" onclick="location.reload()">Reload</button>
+</div>
+
+<div id="hud">
+  <div id="visor"></div>
+  <canvas id="compass" class="hud-c" width="560" height="40"></canvas>
+  <div id="timeChip" class="hud-c"><span id="hTime">--:--</span><span id="tCtl"><button id="tBack" title="-1 h ( [ )">⏪</button><button id="tPlay" title="Pause / play time (T)">⏸</button><button id="tFwd" title="+1 h ( ] )">⏩</button></span><span id="tWarp"></span></div>
+  <div id="ap" class="hud-c">AUTOPILOT · REHEARSAL</div>
+  <button id="endBtn">■ End EVA</button>
+  <div id="hudL" class="hud-c">
+    <div id="preview">PREVIEW · RESOURCES NOT USED</div>
+    <div class="meter" id="mO2"><div class="k">O₂</div><div class="v" id="hO2">100%</div><div class="b"><i id="bO2"></i></div></div>
+    <div class="meter" id="mBat"><div class="k" id="hBatK">ROVER BATTERY</div><div class="v" id="hBat">100%</div><div class="b"><i id="bBat"></i></div></div>
+    <div class="meter"><div class="k">MISSION TIME</div><div class="v" id="hMet">0:00</div></div>
+    <div class="meter"><div class="k">DOSE</div><div class="v" id="hDose">0.00 mSv</div></div>
+  </div>
+  <div id="hudR" class="hud-c">
+    <div class="meter"><div class="k">NEXT</div><div class="v" id="hNext" style="font-size:16px">—</div></div>
+    <div class="meter"><div class="v"><span id="arrow">▲</span> <span id="hDist">—</span></div></div>
+    <div class="meter"><div class="k">SPEED / SLOPE AHEAD</div><div class="v" id="hSpd">0.0 m/s · 0°</div></div>
+    <div class="meter"><div class="k">GROUND</div><div class="v" id="hGround" style="font-size:15px">—</div></div>
+    <div class="meter"><div class="k">COMMS · WALK-BACK</div><div class="v" id="hComm" style="font-size:15px">—</div></div>
+  </div>
+  <div id="stuck"><b>⛔ Wheels embedded in soft sand</b><div style="font-size:12px;margin-top:4px" id="stuckTxt">Hold S to reverse out slowly</div><div class="b"><i id="stuckBar"></i></div></div>
+  <div id="hudB"><div id="warns"></div></div>
+  <div id="info" class="hud-c"></div>
+  <canvas id="mini" width="200" height="200"></canvas>
+  <div id="help" class="hud-c">Drag to look · Click ground to move there · W/S forward/back · A/D strafe · ←/→ turn · Shift faster · V rover/walk · P autopilot · F photo · T time · L lock mouse · M map · I render info · Esc back</div>
+  <div id="lockHint" class="hud-c" style="position:absolute;top:56%;left:50%;transform:translateX(-50%);font-size:13px;background:#0008;padding:4px 12px;border-radius:6px;display:none">🖱 Drag to look around · click the ground to jump there · L locks the mouse</div>
+  <div id="crosshair" class="hud-c" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px;display:none">+</div>
+  <div id="miniTip" class="hud-c">Click to expand map</div>
+  <div id="bigMap">
+    <div class="bm-head"><b>Site map</b><span class="hint">Click anywhere to move there · you can drop pegman here too</span>
+      <button class="bm-btn" id="bmClose">▾ Minimize</button></div>
+    <canvas id="bigCanvas" width="1024" height="1024"></canvas>
+  </div>
+  <div id="toast" class="hud-c"><div class="t" id="toastT"></div><div class="s" id="toastS"></div></div>
+</div>
+
+<div id="debrief"><div class="db" id="dbBody"></div></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const $ = id => document.getElementById(id);
+const D2R = Math.PI / 180, SOL_H = 1.0274912517;            // 1 sol = 1.0275 Earth days
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const smooth = (e0, e1, x) => { const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+const lerp = (a, b, t) => a + (b - a) * t;
+const fmtT = h => { h = Math.max(0, h); const m = Math.round(h * 60); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
+const fmtClock = h => { h = ((h % 24) + 24) % 24; const m = Math.floor(h * 60 + 1e-6); return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; };
+const qs = new URLSearchParams(location.search);
+
+/* =========================================================
+   1. Site data (all generated from public NASA / USGS data, see data/README.md)
+   ========================================================= */
+const SITES = await (await fetch('data/sites.json')).json();
+const SITE_ID = SITES[qs.get('site')]?.ready ? qs.get('site') : 'jezero';
+const SITE = SITES[SITE_ID], P = `data/${SITE_ID}_`;
+const meta = await (await fetch(P + 'meta.json')).json();
+const W = meta.W, N = meta.N, V = N + 1, C = W / N;
+const idx = (i, j) => i * V + j;
+const toX = j => -W / 2 + j * C, toZ = i => -W / 2 + i * C;
+const [demBuf, roughBuf, albBuf, thmBuf, crBuf] = await Promise.all(['dem.f32', 'rough.u8', 'albedo.u8', 'themis.u8', 'crism.u8']
+  .map(f => fetch(P + f).then(r => r.arrayBuffer())));
+let PHOTOS = [];
+try { PHOTOS = await (await fetch(`data/${SITE_ID}/photos/photos.json`)).json(); } catch (e) { }
+const DEM = new Float32Array(demBuf), ROUGH = new Uint8Array(roughBuf), ALB = new Uint8Array(albBuf), THM8 = new Uint8Array(thmBuf), CRISM = new Uint8Array(crBuf);
+const H = new Float32Array(V * V), SAND = new Float32Array(V * V), ROCK = new Float32Array(V * V), SLOPE = new Float32Array(V * V),
+  SHELTER = new Float32Array(V * V), TONE = new Float32Array(V * V), THM = new Float32Array(V * V);
+const pctOf = (arr, p) => { const s = Float32Array.from(arr).sort(); return s[Math.floor(p * (s.length - 1))]; };
+for (let k = 0; k < V * V; k++) { H[k] = DEM[k] - meta.hmin; TONE[k] = ALB[k] / 255; THM[k] = THM8[k] / 255; ROCK[k] = smooth(9, 28, ROUGH[k]); }
+const A_DARK = pctOf(TONE, .06), A_MID = pctOf(TONE, .3), T_LO = pctOf(THM, .08), T_MID = pctOf(THM, .4), T_HI = pctOf(THM, .95);
+for (let i = 0; i < V; i++) for (let j = 0; j < V; j++) {
+  const k = idx(i, j);
+  const dx = (H[idx(i, Math.min(N, j + 1))] - H[idx(i, Math.max(0, j - 1))]) / (2 * C);
+  const dz = (H[idx(Math.min(N, i + 1), j)] - H[idx(Math.max(0, i - 1), j)]) / (2 * C);
+  SLOPE[k] = Math.atan(Math.hypot(dx, dz)) / D2R;
+  let maxA = 0;   // shelter: highest horizon angle within ~60 m (terrain hides part of the sky → less radiation)
+  for (let di = -6; di <= 6; di++) for (let dj = -6; dj <= 6; dj++) {
+    const ii = i + di, jj = j + dj; if ((!di && !dj) || ii < 0 || jj < 0 || ii > N || jj > N) continue;
+    const a = Math.atan2(H[idx(ii, jj)] - H[k], Math.hypot(di, dj) * C); if (a > maxA) maxA = a;
+  }
+  SHELTER[k] = clamp(maxA / (Math.PI / 6), 0, 1);
+}
+for (let k = 0; k < V * V; k++) {
+  // soft soil: THEMIS night IR (low thermal inertia = loose fine material, 100 m) sharpened by dark HiRISE albedo (1 m)
+  const lowTI = smooth(T_MID, T_LO, THM[k]), dark = smooth(A_MID, A_DARK, TONE[k]);
+  SAND[k] = clamp(.5 * lowTI + .4 * dark + .3 * lowTI * dark, 0, 1) * (1 - smooth(14, 24, SLOPE[k])) * (1 - ROCK[k] * .6);
+}
+function heightAt(x, z) {
+  const fx = clamp((x + W / 2) / C, 0, N - 1e-3), fz = clamp((z + W / 2) / C, 0, N - 1e-3);
+  const j = Math.floor(fx), i = Math.floor(fz), u = fx - j, v = fz - i;
+  return H[idx(i, j)] * (1 - u) * (1 - v) + H[idx(i, j + 1)] * u * (1 - v) + H[idx(i + 1, j)] * (1 - u) * v + H[idx(i + 1, j + 1)] * u * v;
+}
+const nearestK = (x, z) => idx(clamp(Math.round((z + W / 2) / C), 0, N), clamp(Math.round((x + W / 2) / C), 0, N));
+const kX = k => toX(k % V), kZ = k => toZ(Math.floor(k / V));
+const lonLat = (x, z) => [meta.lon_range[0] + (x + W / 2) / W * (meta.lon_range[1] - meta.lon_range[0]),
+  meta.lat_range[1] - (z + W / 2) / W * (meta.lat_range[1] - meta.lat_range[0])];
+const BASE = SITE.base ? { x: SITE.base[0], z: SITE.base[1], name: SITE.baseName } : { x: meta.landing[0], z: meta.landing[1], name: SITE.baseName };
+
+// binary heap shared by A* and Dijkstra
+function Heap() {
+  const f = [], k = [];
+  return {
+    get size() { return f.length; },
+    push(fv, kv) { f.push(fv); k.push(kv); let i = f.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (f[p] <= f[i]) break;[f[p], f[i]] = [f[i], f[p]];[k[p], k[i]] = [k[i], k[p]]; i = p; } },
+    pop() { const top = k[0], lf = f.pop(), lk = k.pop(); if (f.length) { f[0] = lf; k[0] = lk; let i = 0; for (; ;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < f.length && f[l] < f[m]) m = l; if (r < f.length && f[r] < f[m]) m = r; if (m === i) break;[f[m], f[i]] = [f[i], f[m]];[k[m], k[i]] = [k[i], k[m]]; i = m; } } return top; }
+  };
+}
+// line of sight to the habitat antenna (6 m mast → 2 m receiver on suit / rover)
+const COMMS = new Uint8Array(V * V);
+{
+  const bi = Math.round((BASE.z + W / 2) / C), bj = Math.round((BASE.x + W / 2) / C), h0 = heightAt(BASE.x, BASE.z) + 6;
+  for (let i = 0; i < V; i++) for (let j = 0; j < V; j++) {
+    const n = Math.max(Math.abs(i - bi), Math.abs(j - bj)), h1 = H[idx(i, j)] + 2; let ok = 1;
+    for (let s = 1; s < n; s++) {
+      const t = s / n, ii = Math.round(bi + (i - bi) * t), jj = Math.round(bj + (j - bj) * t);
+      if (H[idx(ii, jj)] > h0 + (h1 - h0) * t) { ok = 0; break; }
+    }
+    COMMS[idx(i, j)] = ok;
+  }
+}
+// walk-back time (h) from every cell to the habitat on foot: the Apollo LRV rule — never drive farther than you can walk back
+const WALK_SPEED = (slope, sand) => Math.max(.6, 3.2 * (1 - slope / 35)) * (1 - .3 * sand);   // km/h
+const WALKBACK = new Float32Array(V * V).fill(Infinity);
+{
+  const hp = Heap(), done = new Uint8Array(V * V), s = nearestK(BASE.x, BASE.z); WALKBACK[s] = 0; hp.push(0, s);
+  while (hp.size) {
+    const k = hp.pop(); if (done[k]) continue; done[k] = 1;
+    const i = Math.floor(k / V), j = k % V;
+    for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) {
+      if (!di && !dj) continue; const ii = i + di, jj = j + dj; if (ii < 0 || jj < 0 || ii > N || jj > N) continue;
+      const m = idx(ii, jj); if (done[m] || SLOPE[m] > 35 || ROCK[m] > .97) continue;
+      const t = WALKBACK[k] + C * Math.hypot(di, dj) / 1000 / ((WALK_SPEED(SLOPE[k], SAND[k]) + WALK_SPEED(SLOPE[m], SAND[m])) / 2);
+      if (t < WALKBACK[m]) { WALKBACK[m] = t; hp.push(t, m); }
+    }
+  }
+}
+
+/* =========================================================
+   2. Mars clock, sun and climate (Mars24 algorithm, Allison & McEwen 2000)
+   ========================================================= */
+function marsNow(date = new Date()) {
+  const jdTT = date.getTime() / 864e5 + 2440587.5 + 69.184 / 86400, dt = jdTT - 2451545;
+  const M = (19.3871 + .52402073 * dt) * D2R, aFMS = 270.3871 + .524038496 * dt;
+  const nuM = (10.691 + 3e-7 * dt) * Math.sin(M) + .623 * Math.sin(2 * M) + .05 * Math.sin(3 * M) + .005 * Math.sin(4 * M) + .0005 * Math.sin(5 * M);
+  const Ls = ((aFMS + nuM) % 360 + 360) % 360;
+  const eot = 2.861 * Math.sin(2 * Ls * D2R) - .071 * Math.sin(4 * Ls * D2R) + .002 * Math.sin(6 * Ls * D2R) - nuM;
+  const msd = (dt - 4.5) / SOL_H + 44796 - .0009626, mst = (((msd % 1) + 1) % 1) * 24;
+  const ltst = (((mst + SITE.lon / 15 + eot / 15) % 24) + 24) % 24;
+  return { Ls, msd, ltst, sol: Math.floor(msd + SITE.lon / 360) - SITE.solEpoch };
+}
+const NOW0 = marsNow(), Ls = NOW0.Ls;
+const seasonName = (() => {
+  const n = ['spring', 'summer', 'autumn', 'winter'][Math.floor(Ls / 90)], flip = { spring: 'autumn', summer: 'winter', autumn: 'spring', winter: 'summer' };
+  return SITE.lat >= 0 ? `Northern ${n}` : `Southern ${flip[n]}`;
+})();
+const DEC = Math.asin(Math.sin(25.19 * D2R) * Math.sin(Ls * D2R)), PHI = SITE.lat * D2R;
+function sunAt(t) {   // t = LTST hours → elevation (rad), azimuth (rad, from north, clockwise), world direction
+  const h = (t - 12) * 15 * D2R;
+  const el = Math.asin(Math.sin(PHI) * Math.sin(DEC) + Math.cos(PHI) * Math.cos(DEC) * Math.cos(h));
+  const az = Math.atan2(-Math.cos(DEC) * Math.sin(h), Math.cos(PHI) * Math.sin(DEC) - Math.sin(PHI) * Math.cos(DEC) * Math.cos(h));
+  return { el, az, dir: new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el)) };
+}
+const H0 = Math.acos(clamp(-Math.tan(PHI) * Math.tan(DEC), -1, 1)) / D2R / 15;
+const SUNRISE = 12 - H0, SUNSET = 12 + H0;
+const CL = SITE.climate, SEAS = .5 * (1 + Math.cos((Ls - 251) * D2R));   // 1 at perihelion (warmest, dustiest)
+const T_AIR = [lerp(CL.airMin[0], CL.airMin[1], SEAS), lerp(CL.airMax[0], CL.airMax[1], SEAS)];
+const T_GND = [T_AIR[0] - 6, lerp(CL.gndMax[0], CL.gndMax[1], SEAS)];
+const TAU = CL.tau * (1 + .7 * Math.exp(-((((Ls - 245 + 540) % 360 - 180) / 45) ** 2)));
+const PRESS = lerp(CL.press[0], CL.press[1], .5 + .5 * Math.cos((Ls - 255) * D2R));
+function diurnal(t, peak) {   // 0 at sunrise minimum → 1 at the afternoon peak, fast evening cooling
+  t = ((t % 24) + 24) % 24;
+  if (t >= SUNRISE && t <= peak) return Math.sin(Math.PI / 2 * (t - SUNRISE) / (peak - SUNRISE));
+  const u = (((t - peak) % 24) + 24) % 24 / ((((SUNRISE - peak) % 24) + 24) % 24);
+  return Math.pow(1 - clamp(u, 0, 1), 2.2);
+}
+const airTemp = t => lerp(T_AIR[0], T_AIR[1], diurnal(t, 14));
+const gndTemp = t => lerp(T_GND[0], T_GND[1], diurnal(t, 12.8));
+const wind = t => { t = ((t % 24) + 24) % 24; return 2 + 5 * Math.exp(-(((t - 14.5) / 2.6) ** 2)) + (t < 7 ? .5 : 0); };
+// EVA window: sun ≥ 10° and air warmer than −45 °C
+let WIN = null; { let a = null; for (let t = 0; t <= 24; t += .05) { const ok = sunAt(t).el > 10 * D2R && airTemp(t) > -45; if (ok && a === null) a = t; if (!ok && a !== null) { WIN = [a, t]; break; } } if (!WIN && a !== null) WIN = [a, 24]; }
+if (!WIN) WIN = [SUNRISE + 1.5, SUNSET - 1.5];
+let evaStart = (() => { try { const v = parseFloat(localStorage.getItem('mw-start-' + SITE_ID)); if (v >= 0 && v <= 24) return v; } catch (e) { } return Math.round(WIN[0] * 4) / 4; })();
+
+/* =========================================================
+   3. Layers (colors) + legend
+   ========================================================= */
+const MIN_INFO = { 0: ['No CRISM coverage', [.25, .22, .2]], 1: ['Fe/Mg clay', [.3, .72, .85]], 2: ['Carbonate', [.96, .84, .2]], 3: ['Olivine', [.45, .66, .25]], 4: ['Pyroxene', [.7, .35, .78]], 5: ['No strong signature', [.45, .4, .37]] };
+const lerp3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+function ramp(stops, t) {
+  t = clamp(t, 0, 1);
+  for (let i = 1; i < stops.length; i++) if (t <= stops[i][0]) { const [t0, c0] = stops[i - 1], [t1, c1] = stops[i]; return lerp3(c0, c1, (t - t0) / (t1 - t0)); }
+  return stops[stops.length - 1][1];
+}
+const css = stops => 'linear-gradient(90deg,' + stops.map(([t, c]) => `rgb(${c.map(v => v * 255 | 0)}) ${t * 100}%`).join(',') + ')';
+const SLOPE_RAMP = [[0, [.2, .75, .35]], [.5, [.95, .85, .2]], [.8, [.95, .4, .15]], [1, [.55, .05, .15]]];
+const TI_RAMP = [[0, [.15, .3, .85]], [.5, [.6, .55, .6]], [1, [.98, .55, .15]]];
+const RAD_RAMP = [[0, [.92, .25, .5]], [.5, [.85, .7, .4]], [1, [.2, .82, .6]]];
+const WB_RAMP = [[0, [.2, .82, .6]], [.4, [.95, .85, .2]], [.75, [.95, .4, .15]], [1, [.55, .05, .15]]];
+const OPT_TINT = [1, .74, .56];
+const LAYERS = {
+  optical: { name: 'Optical', real: true, sw: css([[0, [.2, .14, .1]], [1, [1, .74, .56]]]), src: `HiRISE RED ortho image ${meta.ortho}`,
+    color: k => OPT_TINT.map(v => v * (.25 + .75 * TONE[k])), legend: () => 'True HiRISE image (tinted). Bright = bedrock and lithified sediment; dark = sand and ripples.' },
+  slope: { name: 'Slope', real: true, sw: css(SLOPE_RAMP), src: `HiRISE DTM ${meta.product} (1 m → 10 m grid)`,
+    color: k => ramp(SLOPE_RAMP, SLOPE[k] / 30), legend: () => `<div class="bar" style="background:${css(SLOPE_RAMP)}"></div>0° flat → 15° caution → 25°+ impassable for the rover` },
+  rough: { name: 'Roughness', real: true, sw: css(SLOPE_RAMP), src: 'HiRISE DTM, 90th percentile of the 1 m slope in each 10 m cell',
+    color: k => ramp(SLOPE_RAMP, ROUGH[k] / 30), legend: () => `<div class="bar" style="background:${css(SLOPE_RAMP)}"></div>Small-scale hazards: boulders, fractures, ledges` },
+  thermal: { name: 'Thermal inertia', real: true, sw: css(TI_RAMP), src: `THEMIS night-time IR mosaic ${meta.themis} (Mars Odyssey, 100 m/px, qualitative)`,
+    color: k => ramp(TI_RAMP, (THM[k] - T_LO) / Math.max(.05, T_HI - T_LO)),
+    legend: () => `<div class="bar" style="background:${css(TI_RAMP)}"></div>Cold at night = low thermal inertia = loose fine sand (bog-down risk) → warm = bedrock, boulders. Drives the soft-soil model together with HiRISE albedo.` },
+  spectral: { name: 'Minerals', real: true, sw: 'linear-gradient(90deg,#4db8d9 0 25%,#f5d633 25% 50%,#73a840 50% 75%,#b35ac7 75%)',
+    src: `CRISM targeted MTRDR summary products ${(meta.crism || []).join(', ')} (MRO, ~18 m/px, browse composites, qualitative)`,
+    color: k => MIN_INFO[CRISM[k]][1],
+    legend: () => '<div class="cats">' + [1, 2, 3, 4, 5].map(c => `<span><i style="background:rgb(${MIN_INFO[c][1].map(v => v * 255 | 0)})"></i>${MIN_INFO[c][0]}</span>`).join('') + '</div><div style="margin-top:6px">Strongest CRISM spectral index per cell: D2300 (clay), BD2500 (carbonate), OLINDEX3 (olivine), LCP/HCP index (pyroxene).</div>' },
+  radiation: { name: 'Radiation shelter', real: true, sw: css(RAD_RAMP), src: 'Sky view from the HiRISE DTM × MSL RAD average dose rate',
+    color: k => ramp(RAD_RAMP, SHELTER[k]), legend: () => `<div class="bar" style="background:${css(RAD_RAMP)}"></div>Fully exposed → sheltered by terrain (refuge during a solar particle event)` },
+  comms: { name: 'Comms line of sight', real: true, sw: 'linear-gradient(90deg,#3b3634 0 50%,#4fd6ff 50%)', src: 'Line of sight from a 6 m habitat mast, computed on the HiRISE DTM',
+    color: k => COMMS[k] ? [.3, .78, .95] : [.22, .2, .19], legend: () => 'Blue = direct radio link to the habitat. Grey = terrain blocks the signal; you need a relay (rover mast or orbiter pass).' },
+  walkback: { name: 'Walk-back time', real: true, sw: css(WB_RAMP), src: 'Dijkstra on the HiRISE DTM with suited walking speed (slope, soft soil)',
+    color: k => WALKBACK[k] === Infinity ? [.3, .05, .1] : ramp(WB_RAMP, WALKBACK[k] / 4),
+    legend: () => `<div class="bar" style="background:${css(WB_RAMP)}"></div>0 h → 4 h on foot back to the habitat. Like Apollo's rover traverses, never drive farther than you can walk back with the O₂ you have left.` },
+};
+let curLayer = 'optical';
+
+/* =========================================================
+   4. Three.js scene: terrain, sky, sun & shadows
+   ========================================================= */
+const app = $('app');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.domElement.className = 'three';
+app.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const PLAN_BG = new THREE.Color(0x120d0b);
+scene.background = PLAN_BG;
+const hemi = new THREE.HemisphereLight(0xffe2c4, 0x4a2a1c, .9); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff1e0, 1.8); scene.add(sun, sun.target);
+sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096); sun.shadow.bias = -.0004;
+
+const planCam = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 5, 12000);
+planCam.position.set(300, 1900, 1750);
+const fpCam = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, .1, 6000);
+let cam = planCam;
+const controls = new OrbitControls(planCam, renderer.domElement);
+controls.maxPolarAngle = 1.35; controls.minDistance = 120; controls.maxDistance = 3800; controls.enableDamping = true; controls.update();
+// helmet lamp / rover headlights for night EVAs
+const lamp = new THREE.SpotLight(0xfff4e0, 0, 140, .55, .5, 1); fpCam.add(lamp); lamp.position.set(0, -.3, 0); lamp.target.position.set(0, -.6, -5); fpCam.add(lamp.target); scene.add(fpCam);
+
+const VEX = 2;   // plan view exaggerates relief ×2
+const world = new THREE.Group(); world.scale.y = VEX; scene.add(world);
+const orthoTex = await new THREE.TextureLoader().loadAsync(P + 'ortho.jpg');
+orthoTex.colorSpace = THREE.SRGBColorSpace; orthoTex.flipY = false; orthoTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+const geo = new THREE.BufferGeometry();
+const pos = new Float32Array(V * V * 3), col = new Float32Array(V * V * 3), uv = new Float32Array(V * V * 2);
+for (let k = 0; k < V * V; k++) { pos[k * 3] = kX(k); pos[k * 3 + 1] = H[k]; pos[k * 3 + 2] = kZ(k); uv[k * 2] = (k % V) / N; uv[k * 2 + 1] = Math.floor(k / V) / N; }
+const index = [];
+for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) { const a = idx(i, j), b = a + 1, c = a + V, d = c + 1; index.push(a, c, b, b, c, d); }
+geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+geo.setIndex(index); geo.computeVertexNormals();
+const terrain = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, map: orthoTex }));
+terrain.castShadow = terrain.receiveShadow = true; world.add(terrain);
+
+// sky dome (first person): dusty butterscotch by day, blue glow around the setting sun, stars at night
+const skyMat = new THREE.ShaderMaterial({
+  side: THREE.BackSide, depthWrite: false, fog: false,
+  uniforms: { zen: { value: new THREE.Color() }, hor: { value: new THREE.Color() }, glow: { value: new THREE.Color(0x7fa6e0) }, sunDir: { value: new THREE.Vector3(0, 1, 0) }, glowAmt: { value: 0 }, sunVis: { value: 1 } },
+  vertexShader: 'varying vec3 vD; void main(){ vD = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
+  fragmentShader: `uniform vec3 zen, hor, glow, sunDir; uniform float glowAmt, sunVis; varying vec3 vD;
+    void main(){ vec3 d = normalize(vD); float h = max(d.y, 0.); vec3 c = mix(hor, zen, pow(h, .45));
+      float s = max(dot(d, sunDir), 0.); c += glow * glowAmt * (pow(s, 7.) * 1.2 + pow(s, 40.));
+      c += vec3(1., .96, .9) * sunVis * smoothstep(.99955, .99985, s);
+      if (d.y < 0.) c = hor * .85;
+      gl_FragColor = vec4(c, 1.);
+      #include <colorspace_fragment>
+    }`
+});
+const sky = new THREE.Mesh(new THREE.SphereGeometry(4500, 32, 16), skyMat); sky.visible = false; scene.add(sky);
+const stars = (() => {
+  const g = new THREE.BufferGeometry(), p = [], rnd = mulberry(9);
+  for (let n = 0; n < 1800; n++) { const u = rnd() * 2 - 1, a = rnd() * Math.PI * 2, y = Math.abs(u), r = Math.sqrt(1 - y * y); p.push(Math.cos(a) * r * 4300, y * 4300, Math.sin(a) * r * 4300); }
+  g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+  const s = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false }));
+  s.visible = false; scene.add(s); return s;
+})();
+const C_DAY_Z = new THREE.Color(0xb88a68), C_DAY_H = new THREE.Color(0xdcae86), C_NIGHT_Z = new THREE.Color(0x020308), C_NIGHT_H = new THREE.Color(0x0b0e17),
+  C_SET_H = new THREE.Color(0x9a7f78), C_SPE = new THREE.Color(0x9a5a4a), tmpA = new THREE.Color(), tmpB = new THREE.Color();
+let sunNow = sunAt(evaStart), envT = evaStart, shadowsOn = true;
+function applyEnv(t, fp) {
+  envT = t; const s = sunNow = sunAt(t), el = s.el;
+  const day = smooth(-.13, .12, el), low = smooth(.4, .02, el) * day;
+  const sunI = el > 0 ? 2.5 * Math.exp(-TAU * .35 * (1 / Math.max(Math.sin(el), .06) - 1)) * smooth(0, .06, el) : 0;
+  sun.intensity = fp ? sunI : Math.max(.35, sunI);
+  sun.color.setRGB(1, .95 - .12 * low, .88 - .25 * low);
+  hemi.intensity = fp ? .06 + .85 * day : .55 + .4 * day;
+  sun.castShadow = shadowsOn && el > .01;
+  tmpA.copy(C_NIGHT_Z).lerp(C_DAY_Z, day); tmpB.copy(C_NIGHT_H).lerp(C_DAY_H, day).lerp(C_SET_H, low * .6);
+  if (spe) { tmpA.lerp(C_SPE, .35); tmpB.lerp(C_SPE, .35); }
+  skyMat.uniforms.zen.value.copy(tmpA); skyMat.uniforms.hor.value.copy(tmpB);
+  skyMat.uniforms.sunDir.value.copy(s.dir); skyMat.uniforms.glowAmt.value = low * 1.3; skyMat.uniforms.sunVis.value = el > -.01 ? 1 : 0;
+  stars.material.opacity = 1 - smooth(-.22, -.03, el);
+  lamp.intensity = fp ? (1 - day) * 60 : 0;
+  if (scene.fog) scene.fog.color.copy(tmpB);
+}
+function placeSun(cx, cy, cz, ext) {
+  const d = sunNow.dir.y > .02 ? sunNow.dir : new THREE.Vector3(0, 1, 0);
+  sun.position.set(cx + d.x * 2500, cy + d.y * 2500, cz + d.z * 2500); sun.target.position.set(cx, cy, cz); sun.target.updateMatrixWorld();
+  const c = sun.shadow.camera; c.left = c.bottom = -ext; c.right = c.top = ext; c.near = 100; c.far = 6000; c.updateProjectionMatrix();
+}
+placeSun(0, 0, 0, 1500);
+
+const tmpC = new THREE.Color();
+const miniImg = document.createElement('canvas'); miniImg.width = miniImg.height = V;
+function applyLayer() {
+  const L = LAYERS[curLayer], ctx = miniImg.getContext('2d'), img = ctx.createImageData(V, V), opt = curLayer === 'optical';
+  terrain.material.map = opt ? orthoTex : null; terrain.material.needsUpdate = true;
+  for (let k = 0; k < V * V; k++) {
+    const c = opt ? L.color(k) : L.color(k).map(v => v * (.45 + .55 * TONE[k])), m = opt ? OPT_TINT : c;
+    tmpC.setRGB(m[0], m[1], m[2], THREE.SRGBColorSpace); col[k * 3] = tmpC.r; col[k * 3 + 1] = tmpC.g; col[k * 3 + 2] = tmpC.b;
+    img.data[k * 4] = c[0] * 255; img.data[k * 4 + 1] = c[1] * 255; img.data[k * 4 + 2] = c[2] * 255; img.data[k * 4 + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0); geo.attributes.color.needsUpdate = true;
+  $('legend').innerHTML = `<div class="card-t" style="margin-bottom:4px"><h2>${L.name}</h2><span class="r b ${L.real ? 'real' : 'model'}">${L.real ? 'REAL DATA' : 'MODEL'}</span></div>${L.legend()}<div class="src">Source: ${L.src}</div>`;
+  document.querySelectorAll('#layers .tile').forEach(b => b.classList.toggle('on', b.dataset.k === curLayer));
+}
+
+/* rocks: density follows the real 1 m roughness. Split into 64 chunks so the GPU only draws what can be seen
+   (frustum culling per chunk + distance culling in first person). */
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const ROCK_CELL = 8, rockHash = new Map(), CH = 8, CHW = W / CH, rockChunks = [];
+{
+  const rnd = mulberry(42), M = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), s = new THREE.Vector3(), p = new THREE.Vector3();
+  const lists = Array.from({ length: CH * CH }, () => []); let total = 0;
+  for (let k = 0; k < V * V && total < 22000; k++) {
+    const n = Math.floor(ROCK[k] * 3 + (rnd() < .2 ? 1 : 0));
+    for (let r = 0; r < n; r++) {
+      const x = kX(k) + (rnd() - .5) * C, z = kZ(k) + (rnd() - .5) * C, sc = (.3 + rnd() * rnd() * 2.5) * (.6 + ROCK[k]);
+      const ci = clamp(Math.floor((x + W / 2) / CHW), 0, CH - 1) * CH + clamp(Math.floor((z + W / 2) / CHW), 0, CH - 1);
+      lists[ci].push([x, z, sc]); total++;
+    }
+  }
+  const rg = new THREE.DodecahedronGeometry(1, 0), rm = new THREE.MeshLambertMaterial({ color: 0x5b3a2a });
+  lists.forEach((list, ci) => {
+    if (!list.length) return;
+    const mesh = new THREE.InstancedMesh(rg, rm, list.length);
+    list.forEach(([x, z, sc], n) => {
+      p.set(x, heightAt(x, z) + sc * .3, z); e.set(rnd() * 3, rnd() * 3, rnd() * 3); q.setFromEuler(e);
+      s.set(sc * (1 + rnd() * .5), sc * .7, sc); M.compose(p, q, s); mesh.setMatrixAt(n, M);
+      const key = Math.floor(x / ROCK_CELL) + ',' + Math.floor(z / ROCK_CELL); if (!rockHash.has(key)) rockHash.set(key, []);
+      rockHash.get(key).push({ x, z, r: sc * 1.1, h: sc * .9 });
+    });
+    mesh.computeBoundingSphere(); mesh.castShadow = mesh.receiveShadow = true;
+    mesh.userData.cx = -W / 2 + (Math.floor(ci / CH) + .5) * CHW; mesh.userData.cz = -W / 2 + (ci % CH + .5) * CHW;
+    world.add(mesh); rockChunks.push(mesh);
+  });
+}
+const ROCK_TOTAL = [...rockHash.values()].reduce((a, l) => a + l.length, 0);
+
+/* =========================================================
+   5. Habitat, targets, photo pins
+   ========================================================= */
+const targets = SITE.targets.map(t => ({ ...t }));
+let customN = 0;
+const beaconGeo = new THREE.CylinderGeometry(2.5, 2.5, 70, 8);
+const beaconMat = new THREE.MeshBasicMaterial({ color: 0xffd34f, transparent: true, opacity: .55 });
+const beaconOff = new THREE.MeshBasicMaterial({ color: 0x888888, transparent: true, opacity: .25 });
+const beacons = new THREE.Group(); world.add(beacons);
+{
+  const hab = new THREE.Group();
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(14, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0xf2f2f2 }));
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(16, 16, 3, 24), new THREE.MeshLambertMaterial({ color: 0x8899aa }));
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(.25, .25, 6, 6), new THREE.MeshLambertMaterial({ color: 0xcccccc })); mast.position.set(18, 3, 0);
+  hab.add(dome, ring, mast); hab.traverse(o => o.castShadow = o.receiveShadow = true);
+  hab.position.set(BASE.x, heightAt(BASE.x, BASE.z), BASE.z); world.add(hab);
+}
+// photo pins: real Perseverance / Curiosity raw images taken at these traverse stops (NASA MMGIS waypoints + raw image API)
+const camTex = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  g.fillStyle = '#ffffff'; g.beginPath(); g.arc(64, 64, 58, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#e8562a'; g.beginPath(); g.arc(64, 64, 50, 0, Math.PI * 2); g.fill();
+  g.font = '62px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('📷', 64, 68);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+})();
+const photoPins = new THREE.Group(); world.add(photoPins);
+PHOTOS.forEach((p, n) => {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: camTex, depthTest: true, transparent: true }));
+  s.userData.photo = n; photoPins.add(s);
+});
+function layoutPins(fp) {
+  photoPins.children.forEach(s => {
+    const p = PHOTOS[s.userData.photo], h = heightAt(p.x, p.z);
+    if (fp) { s.position.set(p.x, h + 2.4, p.z); s.scale.setScalar(1.1); } else { s.position.set(p.x, h + 14, p.z); s.scale.set(34, 34 / VEX, 1); }
+  });
+}
+layoutPins(false);
+$('photoCount').textContent = PHOTOS.length ? `(${PHOTOS.length} from ${SITE.rover})` : '(none for this site)';
+function openPhoto(n) {
+  const p = PHOTOS[n]; if (!p) return;
+  $('photoImg').src = `data/${SITE_ID}/photos/${p.file}`;
+  const dir = p.heading == null ? '' : ` · looking ${['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(p.heading / 45) % 8]} (approx.)`;
+  $('photoCap').innerHTML = `<b>📷 ${SITE.rover} · ${p.cam.replace(/_/g, ' ')} · Sol ${p.sol}</b><br>${p.lat.toFixed(5)}°, ${p.lon.toFixed(5)}°E${dir}<br>
+    <span class="hint">Real raw image, NASA/JPL-Caltech${SITE.rover === 'Curiosity' ? '/MSSS' : '/ASU'} · <a href="${p.src}" target="_blank" rel="noopener">original</a> · rover position from the NASA traverse map</span>`;
+  $('photoCard').style.display = 'block'; openPhotoN = n;
+}
+let openPhotoN = -1;
+$('photoX').onclick = () => { $('photoCard').style.display = 'none'; openPhotoN = -1; };
+
+/* =========================================================
+   6. Route planning (A*) with explainable cost + EVA budget
+   ========================================================= */
+const PROFILES = {
+  safe: { name: 'Safest', maxSlope: 20, wS: 8, wSand: 6, wRock: 8 },
+  fast: { name: 'Fastest', maxSlope: 25, wS: 1.5, wSand: 1.5, wRock: 2.5 },
+};
+const MOBILITY = {
+  rover: { name: '🚙 Rover', long: '🚙 Ride rover', eye: 2.6, vmax: 6, slopeAdd: 0, rockMax: .85, sandW: 1, radius: 1.6, stepOver: .5,
+    bat: 'ROVER BATTERY', batRange: 20000, limit: 25, speed: (slope, sand) => Math.max(1, 8 * (1 - slope / 30)) * (1 - .5 * sand) },
+  walk: { name: '🚶 Walk', long: '🚶 Walk (EVA)', eye: 1.7, vmax: 1.4, slopeAdd: 5, rockMax: .97, sandW: .4, radius: .45, stepOver: .3,
+    bat: 'SUIT BATTERY', batRange: 12000, limit: 30, speed: WALK_SPEED },
+};
+let curProfile = 'safe', spe = false, mob = 'rover';
+const EVA_LIMIT = 8, STOP_MIN = 20;
+const SPEED = (slope, sand, m = mob) => MOBILITY[m].speed(slope, sand);
+const DOSE_RATE = sh => .03 + (spe ? 2.2 * (1 - .85 * sh) : 0);                          // mSv/h (MSL RAD surface average ≈ 0.67 mSv/sol)
+const O2_RATE = (m, slope, sand) => m === 'walk' ? 1 + slope / 25 + .3 * sand : .85;       // × nominal suit consumption (8 h budget)
+const BOG_P = k => SAND[k] > .55 ? .0012 * ((SAND[k] - .55) / .45) * (1 + SLOPE[k] / 8) : 0;   // rover embedding chance per metre
+const HEATER = t => airTemp(t) < -50 ? .06 : 0;                                               // battery fraction / h for heaters in the cold
+function costField(p, m = mob) {
+  const M = MOBILITY[m], c = new Float32Array(V * V), maxS = p.maxSlope + M.slopeAdd;
+  for (let k = 0; k < V * V; k++) {
+    if (SLOPE[k] > maxS || ROCK[k] > M.rockMax) { c[k] = Infinity; continue; }
+    c[k] = 1 + p.wS * (SLOPE[k] / 25) ** 2 + p.wSand * M.sandW * SAND[k] + p.wRock * ROCK[k] + (spe ? 12 * (1 - SHELTER[k]) : 0);
+  }
+  return c;
+}
+function astar(cost, s, g) {
+  const n = V * V, G = new Float32Array(n).fill(Infinity), from = new Int32Array(n).fill(-1), closed = new Uint8Array(n), hp = Heap();
+  const gi = Math.floor(g / V), gj = g % V, cst = k => (k === s || k === g) ? Math.min(cost[k], 5) : cost[k];
+  G[s] = 0; hp.push(0, s);
+  while (hp.size) {
+    const k = hp.pop(); if (closed[k]) continue; closed[k] = 1; if (k === g) break;
+    const i = Math.floor(k / V), j = k % V;
+    for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) {
+      if (!di && !dj) continue; const ii = i + di, jj = j + dj; if (ii < 0 || jj < 0 || ii > N || jj > N) continue;
+      const m = idx(ii, jj), cm = cst(m); if (cm === Infinity || closed[m]) continue;
+      const ng = G[k] + C * Math.hypot(di, dj) * (cst(k) + cm) / 2;
+      if (ng < G[m]) { G[m] = ng; from[m] = k; hp.push(ng + C * Math.hypot(ii - gi, jj - gj), m); }
+    }
+  }
+  if (from[g] === -1 && s !== g) return null;
+  const path = []; for (let k = g; k !== -1; k = from[k]) path.push(k); return path.reverse();
+}
+function orderStops(stops) {
+  const rest = stops.slice(), out = []; let cx = BASE.x, cz = BASE.z;
+  while (rest.length) { let bi = 0, bd = Infinity; rest.forEach((t, i) => { const d = Math.hypot(t.x - cx, t.z - cz); if (d < bd) { bd = d; bi = i; } }); const t = rest.splice(bi, 1)[0]; out.push(t); cx = t.x; cz = t.z; }
+  return out;
+}
+function planRoute(profileKey, m = mob) {
+  const stops = orderStops(targets.filter(t => t.on)); if (!stops.length) return null;
+  const cost = costField(PROFILES[profileKey], m), seq = [BASE, ...stops, BASE], segs = [];
+  for (let n = 0; n < seq.length - 1; n++) {
+    const p = astar(cost, nearestK(seq[n].x, seq[n].z), nearestK(seq[n + 1].x, seq[n + 1].z));
+    if (!p) return { fail: seq[n + 1].name || seq[n + 1].id }; segs.push(p);
+  }
+  const pts = [], stopIdx = []; let dist = 0, time = 0, dose = 0, o2 = 0, maxS = 0, sandLen = 0, bogL = 0, noComm = 0, nightH = 0, heat = 0;
+  const tick = (dt, k, rate) => {
+    const ltst = evaStart + time / SOL_H;
+    time += dt; dose += dt * DOSE_RATE(SHELTER[k]); o2 += dt * rate;
+    if (sunAt(ltst).el < 0) nightH += dt; heat += dt * HEATER(ltst);
+  };
+  segs.forEach((ks, n) => {
+    for (let a = 0; a < ks.length - 1; a++) {
+      const ax = kX(ks[a]), az = kZ(ks[a]), bx = kX(ks[a + 1]), bz = kZ(ks[a + 1]);
+      const L = Math.hypot(bx - ax, bz - az), steps = Math.max(1, Math.round(L / 4));
+      for (let s = 0; s < steps; s++) {
+        const t = s / steps, x = ax + (bx - ax) * t, z = az + (bz - az) * t, k = t < .5 ? ks[a] : ks[a + 1], dl = L / steps;
+        pts.push({ x, z, h: heightAt(x, z), d: dist, slope: SLOPE[k], t: time, o2, k, comm: COMMS[k] });
+        dist += dl; tick(dl / 1000 / SPEED(SLOPE[k], SAND[k], m), k, O2_RATE(m, SLOPE[k], SAND[k]));
+        maxS = Math.max(maxS, SLOPE[k]); if (SAND[k] > .4) sandLen += dl; if (m === 'rover') bogL += dl * BOG_P(k); if (!COMMS[k]) noComm += dl;
+      }
+    }
+    if (n < stops.length) { stopIdx.push(pts.length); tick(STOP_MIN / 60, ks[ks.length - 1], 1); }
+  });
+  const last = segs[segs.length - 1].slice(-1)[0];
+  pts.push({ x: kX(last), z: kZ(last), h: H[last], d: dist, slope: SLOPE[last], t: time, o2, k: last, comm: 1 });
+  let pnr = -1;
+  pts.forEach((p, i) => { p.wb = WALKBACK[p.k]; p.margin = (EVA_LIMIT - p.o2) - (p.wb * 1.25 + .5); if (p.margin < 0 && pnr < 0) pnr = i; });
+  const batUsed = dist / MOBILITY[m].batRange + heat;
+  return { pts, stops, stopD: stopIdx.map(i => pts[Math.min(i, pts.length - 1)].d), dist, time, dose, o2, maxS, sandPct: sandLen / dist * 100,
+    bogRisk: 1 - Math.exp(-bogL), noCommPct: noComm / dist * 100, pnr, nightH, batUsed, m, profile: profileKey, start: evaStart };
+}
+
+/* =========================================================
+   7. Route rendering + panel UI
+   ========================================================= */
+let route = null, altRoute = null, routeMeshes = [], showAlt = true;
+const pnrMarker = new THREE.Mesh(new THREE.ConeGeometry(9, 26, 12), new THREE.MeshBasicMaterial({ color: 0xff5a5a })); pnrMarker.rotation.x = Math.PI; pnrMarker.visible = false; world.add(pnrMarker);
+const profMarker = new THREE.Mesh(new THREE.SphereGeometry(10, 16, 10), new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false })); profMarker.renderOrder = 12; profMarker.visible = false; world.add(profMarker);
+function tubeFor(pts, radius, color, opacity, lift) {
+  const v = pts.filter((_, i) => i % 2 === 0 || i === pts.length - 1).map(p => new THREE.Vector3(p.x, heightAt(p.x, p.z) + lift, p.z));
+  if (v.length < 2) return null;
+  const mesh = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(v, false, 'centripetal'), v.length * 2, radius, 6, false),
+    new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity }));
+  world.add(mesh); routeMeshes.push(mesh); return mesh;
+}
+function drawRoutes(fp = false) {
+  routeMeshes.forEach(m => { world.remove(m); m.geometry.dispose(); }); routeMeshes = [];
+  pnrMarker.visible = false; $('pnrLabel')?.remove();
+  if (!hasRoute()) return;
+  tubeFor(route.pts, fp ? .18 : 4, 0x4fd6ff, fp ? .7 : 1, fp ? .25 : 3);
+  if (!fp) {
+    if (showAlt && altRoute && !altRoute.fail) tubeFor(altRoute.pts, 2.5, 0xffb547, .6, 2);
+    // segments beyond the walk-back limit (only matters when riding: if the rover dies there you can't walk home)
+    if (route.m === 'rover') {
+      let run = [];
+      route.pts.forEach((p, i) => { if (p.margin < 0) run.push(p); if ((p.margin >= 0 || i === route.pts.length - 1) && run.length) { tubeFor(run, 5.5, 0xff5a5a, .9, 3.5); run = []; } });
+    }
+    if (route.pnr >= 0 && route.m === 'rover') {
+      const p = route.pts[route.pnr]; pnrMarker.position.set(p.x, heightAt(p.x, p.z) + 20, p.z); pnrMarker.visible = true;
+      const el = document.createElement('div'); el.id = 'pnrLabel'; el.className = 'label pnr'; el.textContent = '⚠ Walk-back limit'; labelBox.appendChild(el);
+      labels.push({ el, v: new THREE.Vector3(p.x, heightAt(p.x, p.z) * VEX + 75, p.z), pnr: true });
+    }
+  }
+}
+const hasRoute = () => route && !route.fail;
+function recompute() {
+  route = planRoute(curProfile); altRoute = planRoute(curProfile === 'safe' ? 'fast' : 'safe');
+  labels = labels.filter(l => !l.pnr);
+  drawRoutes();
+  const msg = $('routeMsg'), st = $('stats'), vd = $('verdict'), cmp = $('cmp'), rk = $('risks'), fpBtn = $('fpBtn');
+  if (!hasRoute()) {
+    vd.innerHTML = !route ? '<div class="verdict caution">Select at least one science stop.</div>'
+      : `<div class="verdict nogo">⛔ Cannot reach "${route.fail}"<small>Slope or boulders exceed the limit. Try Fastest, walking, or another stop.</small></div>`;
+    st.innerHTML = rk.innerHTML = cmp.innerHTML = msg.innerHTML = ''; fpBtn.disabled = true; drawProfile(null); drawDayBar(); return;
+  }
+  fpBtn.disabled = false;
+  msg.innerHTML = `<span style="color:var(--accent)">━</span> ${PROFILES[curProfile].name}${showAlt ? ' <span style="color:var(--warn)">━</span> alt' : ''}`;
+  const r = route, margin = EVA_LIMIT - r.o2, end = evaStart + r.time / SOL_H;
+  st.innerHTML = [['Distance', (r.dist / 1000).toFixed(2) + ' km'], ['Duration', fmtT(r.time) + ' h'], ['Back by', fmtClock(end)],
+    ['Max slope', r.maxS.toFixed(0) + '°'], ['Dose', r.dose.toFixed(2) + ' mSv'], ['O₂ margin', fmtT(margin) + ' h']]
+    .map(([k, v]) => `<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+  const nogo = [], caut = [], risks = [];
+  const add = (lvl, icon, label, val) => risks.push(`<div class="risk"><i class="dot-${lvl}"></i><span>${icon} ${label}</span><span class="v">${val}</span></div>`);
+  if (margin < 1) nogo.push(`O₂ margin under 1 h`);
+  if (spe && r.dose > 1) nogo.push('dose too high during the SPE');
+  const bat = r.batUsed * 100;
+  if (bat > 100) nogo.push(`${MOBILITY[r.m].bat.toLowerCase()} runs out`);
+  add(bat > 100 ? 'b' : bat > 75 ? 'w' : 'g', '🔋', MOBILITY[r.m].bat.charAt(0) + MOBILITY[r.m].bat.slice(1).toLowerCase() + ' used', bat.toFixed(0) + '%');
+  if (r.m === 'rover') {
+    const b = r.bogRisk * 100; if (b > 35) nogo.push('high risk of getting stuck in sand'); else if (b > 15) caut.push('soft sand on route');
+    add(b > 35 ? 'b' : b > 15 ? 'w' : 'g', '🏜', 'Bog-down risk (soft sand)', b.toFixed(0) + '%');
+  } else add(r.sandPct > 30 ? 'w' : 'g', '🏜', 'Soft sand on route', r.sandPct.toFixed(0) + '%');
+  add(r.noCommPct > 30 ? 'w' : 'g', '📡', 'No line of sight to habitat', r.noCommPct.toFixed(0) + '%');
+  if (r.noCommPct > 30) caut.push('long comms blackout');
+  if (r.m === 'rover') {
+    add(r.pnr >= 0 ? 'w' : 'g', '🚶', 'Walk-back limit', r.pnr >= 0 ? `exceeded at ${(r.pts[r.pnr].d / 1000).toFixed(1)} km` : 'OK everywhere');
+    if (r.pnr >= 0) caut.push('part of the drive is beyond walk-back range');
+  }
+  add(r.nightH > 1 ? 'b' : r.nightH > 0 ? 'w' : 'g', '🌙', 'After sunset', r.nightH > 0 ? fmtT(r.nightH) + ' h' : 'none');
+  if (r.nightH > 1) nogo.push('more than 1 h after sunset'); else if (r.nightH > 0) caut.push('ends after sunset');
+  rk.innerHTML = risks.join('');
+  vd.innerHTML = nogo.length ? `<div class="verdict nogo">NO-GO<small>${nogo.join(' · ')}</small></div>`
+    : caut.length ? `<div class="verdict caution">GO WITH CAUTION<small>${caut.join(' · ')}</small></div>`
+      : `<div class="verdict go">GO ✓<small>${r.stops.map(t => t.id).join(' → ')} → habitat · back ${fmtClock(end)} LTST</small></div>`;
+  if (showAlt && altRoute && !altRoute.fail) {
+    const dd = altRoute.dist - r.dist, dt = (altRoute.time - r.time) * 60;
+    cmp.innerHTML = `vs ${PROFILES[altRoute.profile].name}: ${dd >= 0 ? '+' : ''}${(dd / 1000).toFixed(2)} km, ${dt >= 0 ? '+' : ''}${dt.toFixed(0)} min, max slope ${altRoute.maxS.toFixed(0)}°`;
+  } else cmp.innerHTML = '';
+  drawProfile(r); drawDayBar(); drawEnvChart();
+}
+let profGeom = null;
+function drawProfile(r) {
+  const cv = $('profile'), g = cv.getContext('2d'), w = cv.width, h = cv.height;
+  g.clearRect(0, 0, w, h); profGeom = null; if (!r) return;
+  const hs = r.pts.map(p => p.h), lo = Math.min(...hs) - 3, hi = Math.max(...hs) + 3, top = 30, bot = h - 26;
+  const X = d => 14 + d / r.dist * (w - 28), Y = e => bot - (e - lo) / (hi - lo) * (bot - top);
+  for (let i = 1; i < r.pts.length; i++) {
+    const a = r.pts[i - 1], b = r.pts[i], c = ramp(SLOPE_RAMP, b.slope / 30);
+    g.fillStyle = `rgb(${c.map(v => v * 255 | 0)})`; g.fillRect(X(a.d), Y(b.h), Math.max(1, X(b.d) - X(a.d)), bot - Y(b.h));
+    if (!b.comm) { g.fillStyle = '#8a8a8a'; g.fillRect(X(a.d), 14, Math.max(1, X(b.d) - X(a.d)), 4); }
+    if (r.m === 'rover' && b.margin < 0) { g.fillStyle = '#ff6b6b'; g.fillRect(X(a.d), 20, Math.max(1, X(b.d) - X(a.d)), 4); }
+  }
+  g.fillStyle = '#fff'; g.font = 'bold 18px sans-serif'; g.textAlign = 'center';
+  r.stopD.forEach((d, i) => g.fillText('◆', X(d), top + 2));
+  g.fillStyle = '#a8968a'; g.font = '17px sans-serif'; g.textAlign = 'left'; g.fillText('0', 12, h - 4);
+  g.textAlign = 'center'; g.fillText((r.dist / 1000).toFixed(1) + ' km', w / 2, h - 4);
+  g.textAlign = 'right'; g.fillText(`${(lo + meta.hmin).toFixed(0)} … ${(hi + meta.hmin).toFixed(0)} m`, w - 10, h - 4);
+  profGeom = { X, lo, hi, w, r };
+}
+$('profile').addEventListener('mousemove', e => {
+  if (!profGeom) return; const b = e.target.getBoundingClientRect(), u = (e.clientX - b.left) / b.width * profGeom.w;
+  const d = clamp((u - 14) / (profGeom.w - 28), 0, 1) * profGeom.r.dist;
+  let best = profGeom.r.pts[0]; for (const p of profGeom.r.pts) if (Math.abs(p.d - d) < Math.abs(best.d - d)) best = p;
+  profMarker.position.set(best.x, heightAt(best.x, best.z) + 8, best.z); profMarker.visible = true;
+  const tip = $('profTip'); tip.style.display = 'block'; tip.style.left = e.clientX + 'px'; tip.style.top = e.clientY + 'px';
+  tip.innerHTML = `${(best.d / 1000).toFixed(2)} km · ${(best.h + meta.hmin).toFixed(0)} m · ${best.slope.toFixed(0)}° · ${fmtClock(evaStart + best.t / SOL_H)} · ${best.comm ? '📡 ✓' : '📡 ✗'} · walk-back ${fmtT(best.wb)} h`;
+});
+$('profile').addEventListener('mouseleave', () => { profMarker.visible = false; $('profTip').style.display = 'none'; });
+
+function renderTargets() {
+  const box = $('targets');
+  box.innerHTML = targets.map((t, i) => `
+    <label class="tgt ${t.on ? '' : 'off'}"><input type="checkbox" data-i="${i}" ${t.on ? 'checked' : ''}>
+      <div><div class="n"><span class="id">${t.id}</span>${t.name}<span class="tag">${t.tag}</span></div><div class="d" title="${t.why.replace(/"/g, '&quot;')}">${t.why}</div></div>
+      ${t.custom ? `<button data-del="${i}" title="Remove">✕</button>` : '<span></span>'}</label>`).join('');
+  box.querySelectorAll('input').forEach(el => el.onchange = () => { targets[+el.dataset.i].on = el.checked; renderTargets(); refreshBeacons(); recompute(); });
+  box.querySelectorAll('button[data-del]').forEach(el => el.onclick = e => { e.preventDefault(); targets.splice(+el.dataset.del, 1); renderTargets(); refreshBeacons(); recompute(); });
+}
+const labelBox = $('labels');
+let labels = [];
+function refreshBeacons() {
+  beacons.clear(); labelBox.querySelectorAll('.label:not(.pnr)').forEach(e => e.remove()); labels = labels.filter(l => l.pnr);
+  const add = (t, cls, html) => {
+    const el = document.createElement('div'); el.className = 'label ' + cls; el.innerHTML = html; labelBox.appendChild(el);
+    labels.push({ el, v: new THREE.Vector3(t.x, heightAt(t.x, t.z) * VEX + (cls === 'base' ? 40 : 145), t.z) });
+  };
+  add(BASE, 'base', `<b>⌂</b> ${BASE.name}`);
+  targets.forEach(t => { const m = new THREE.Mesh(beaconGeo, t.on ? beaconMat : beaconOff); m.position.set(t.x, heightAt(t.x, t.z) + 35, t.z); beacons.add(m); add(t, '', `<b>${t.id}</b> ${t.name}`); });
+}
+
+// site card
+$('siteName').textContent = SITE.name;
+$('siteMeta').innerHTML = `${SITE.mission} · ${Math.abs(SITE.lat).toFixed(2)}°${SITE.lat >= 0 ? 'N' : 'S'} ${SITE.lon.toFixed(2)}°E`;
+$('siteBadges').innerHTML = ['HiRISE DTM 1 m', 'THEMIS IR', 'CRISM', PHOTOS.length ? `${PHOTOS.length} rover photos` : null].filter(Boolean).map(b => `<span class="badge r">${b}</span>`).join('') + '<span class="badge">2.56 × 2.56 km</span><span class="badge">relief ×2 in map</span>';
+$('siteCard').style.backgroundImage = `linear-gradient(100deg,#120c0af2 35%,#120c0a99 75%,#120c0a55), url(${P}ortho.jpg)`;
+document.title = `Marswalk · ${SITE.name}`;
+// tabs
+function setTab(t) {
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  document.querySelectorAll('.p-body section').forEach(s => s.classList.toggle('on', s.dataset.tab === t));
+  document.querySelector('.p-body').scrollTop = 0;
+  try { localStorage.setItem('mw-tab', t); } catch (e) { }
+  if (t === 'env') drawEnvChart();
+}
+document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+try { const t = localStorage.getItem('mw-tab'); if (t) setTab(t); } catch (e) { }
+// layer tiles + mobility / profile segments
+$('layers').innerHTML = Object.entries(LAYERS).map(([k, L]) => `<button class="tile" data-k="${k}"><div class="sw" style="background:${L.sw}"></div><div class="n">${L.name}</div><div class="b ${L.real ? 'real' : 'model'}">${L.real ? 'REAL DATA' : 'MODEL'}</div></button>`).join('');
+document.querySelectorAll('#layers .tile').forEach(b => b.onclick = () => { curLayer = b.dataset.k; applyLayer(); });
+$('profiles').innerHTML = Object.entries(PROFILES).map(([k, p]) => `<button data-k="${k}">${p.name}</button>`).join('');
+$('mobility').innerHTML = Object.entries(MOBILITY).map(([k, m]) => `<button data-k="${k}">${m.name}</button>`).join('');
+const setSegs = () => {
+  document.querySelectorAll('#profiles button').forEach(b => b.classList.toggle('on', b.dataset.k === curProfile));
+  document.querySelectorAll('#mobility button').forEach(b => b.classList.toggle('on', b.dataset.k === mob));
+};
+document.querySelectorAll('#mobility button').forEach(b => b.onclick = () => { mob = b.dataset.k; setSegs(); recompute(); });
+document.querySelectorAll('#profiles button').forEach(b => b.onclick = () => { curProfile = b.dataset.k; setSegs(); recompute(); });
+$('speBtn').onclick = e => {
+  spe = !spe; e.target.classList.toggle('on', spe);
+  e.target.textContent = spe ? '☢ SPE active (click to clear)' : '☢ Simulate solar particle event';
+  $('speBanner').style.display = spe ? 'block' : 'none';
+  if (spe) { curLayer = 'radiation'; applyLayer(); }
+  recompute();
+};
+$('togPhotos').onchange = e => { photoPins.visible = e.target.checked; };
+$('togAlt').onchange = e => { showAlt = e.target.checked; recompute(); };
+$('togShadow').onchange = e => { shadowsOn = e.target.checked; applyEnv(envT, mode === 'fp'); };
+
+// EVA start time
+function setStart(t, save = true) {
+  evaStart = clamp(Math.round(t * 4) / 4, 0, 24); $('startSlider').value = evaStart; $('startClock').textContent = fmtClock(evaStart);
+  if (save) try { localStorage.setItem('mw-start-' + SITE_ID, evaStart); } catch (e) { }
+  if (mode === 'plan') applyEnv(evaStart, false);
+  recompute();
+}
+$('startSlider').oninput = e => setStart(+e.target.value);
+$('useRec').onclick = () => setStart(WIN[0]);
+$('useNow').onclick = () => setStart(marsNow().ltst);
+function drawDayBar() {
+  const cv = $('dayBar'), g = cv.getContext('2d'), w = cv.width, h = cv.height, X = t => t / 24 * w;
+  g.clearRect(0, 0, w, h);
+  for (let x = 0; x < w; x += 2) { const el = sunAt(x / w * 24).el; const d = smooth(-.13, .12, el); g.fillStyle = `rgb(${18 + 150 * d | 0},${16 + 100 * d | 0},${24 + 60 * d | 0})`; g.fillRect(x, 0, 2, h); }
+  g.fillStyle = '#5cf29a55'; g.fillRect(X(WIN[0]), h - 12, X(WIN[1]) - X(WIN[0]), 12);
+  if (hasRoute()) { const a = X(evaStart), b = X(Math.min(24, evaStart + route.time / SOL_H)); g.fillStyle = '#4fd6ff'; g.fillRect(a, 10, Math.max(3, b - a), 20); }
+  g.fillStyle = '#ffffffaa'; g.font = '16px sans-serif'; g.textAlign = 'center';
+  [0, 6, 12, 18, 24].forEach(t => g.fillText(String(t).padStart(2, '0'), clamp(X(t), 12, w - 12), h - 16));
+  g.fillStyle = '#ffd34f'; g.fillText('☀', X(SUNRISE), 24); g.fillText('☀', X(SUNSET), 24);
+}
+
+/* =========================================================
+   8. Environment tab (Mars clock + sol forecast)
+   ========================================================= */
+$('envSite').textContent = SITE.name;
+$('solLbl').textContent = `Sol ${NOW0.sol} · Ls ${Ls.toFixed(0)}°`;
+function drawEnvChart() {
+  const cv = $('envChart'), g = cv.getContext('2d'), w = cv.width, h = cv.height, L = 46, R = 12, T = 14, B = 34;
+  const X = t => L + t / 24 * (w - L - R), tmin = Math.floor((T_GND[0] - 5) / 20) * 20, tmax = Math.ceil((T_GND[1] + 5) / 20) * 20, Y = c => T + (1 - (c - tmin) / (tmax - tmin)) * (h - T - B);
+  g.clearRect(0, 0, w, h);
+  for (let x = L; x < w - R; x += 3) { const d = smooth(-.13, .12, sunAt((x - L) / (w - L - R) * 24).el); g.fillStyle = `rgba(255,190,120,${.03 + .1 * d})`; g.fillRect(x, T, 3, h - T - B); }
+  g.fillStyle = '#5cf29a33'; g.fillRect(X(WIN[0]), T, X(WIN[1]) - X(WIN[0]), h - T - B);
+  if (hasRoute()) { g.fillStyle = '#4fd6ff'; g.fillRect(X(evaStart), h - B - 6, Math.max(3, X(Math.min(24, evaStart + route.time / SOL_H)) - X(evaStart)), 6); }
+  g.strokeStyle = '#ffffff14'; g.fillStyle = '#a8968a'; g.font = '16px sans-serif'; g.textAlign = 'right';
+  for (let c = tmin; c <= tmax; c += 20) { g.beginPath(); g.moveTo(L, Y(c)); g.lineTo(w - R, Y(c)); g.stroke(); g.fillText(c + '°', L - 6, Y(c) + 5); }
+  g.textAlign = 'center'; [0, 6, 12, 18, 24].forEach(t => g.fillText(String(t).padStart(2, '0') + ':00', clamp(X(t), L + 20, w - 30), h - 10));
+  const line = (f, color, dash) => { g.strokeStyle = color; g.lineWidth = 3; g.setLineDash(dash); g.beginPath(); for (let t = 0; t <= 24; t += .1) { const p = [X(t), Y(f(t))]; t ? g.lineTo(...p) : g.moveTo(...p); } g.stroke(); g.setLineDash([]); };
+  line(gndTemp, '#ff6b6b', [8, 6]); line(airTemp, '#ffb547', []);
+  const nt = marsNow().ltst; g.strokeStyle = '#ffffffcc'; g.lineWidth = 2; g.beginPath(); g.moveTo(X(nt), T); g.lineTo(X(nt), h - B); g.stroke();
+  g.fillStyle = '#fff'; g.textAlign = 'left'; g.fillText('now', X(nt) + 4, T + 14);
+}
+function updateNow() {
+  const n = marsNow();
+  $('nowClock').textContent = fmtClock(n.ltst);
+  $('nowSub').textContent = `LTST · ${seasonName} (Ls ${n.Ls.toFixed(0)}°) · sun ${(sunAt(n.ltst).el / D2R).toFixed(0)}°`;
+  $('nowTemp').textContent = airTemp(n.ltst).toFixed(0) + ' °C';
+  $('envSol').textContent = `Sol ${n.sol}`;
+  $('envSol').title = `${SITE.rover} mission sol · Mars Sol Date ${Math.floor(n.msd)}`;
+}
+$('envMetrics').innerHTML = [['Sunrise', fmtClock(SUNRISE)], ['Sunset', fmtClock(SUNSET)], ['Daylight', fmtT(SUNSET - SUNRISE) + ' h'],
+  ['Air temp', `${T_AIR[0].toFixed(0)} … ${T_AIR[1].toFixed(0)}°`], ['Ground max', `${T_GND[1].toFixed(0)} °C`], ['Dust τ', TAU.toFixed(2)],
+  ['Wind (pm)', `${wind(14.5).toFixed(0)} m/s`], ['Pressure', `${PRESS.toFixed(1)} hPa`], ['EVA window', `${fmtClock(WIN[0])}–${fmtClock(WIN[1])}`]]
+  .map(([k, v]) => `<div class="kpi"><div class="k">${k}</div><div class="v" style="font-size:14px">${v}</div></div>`).join('');
+$('envSrc').innerHTML = `Mars time and sun position: computed with the Mars24 algorithm (Allison &amp; McEwen 2000). Temperature, wind, dust and pressure: <b style="color:var(--warn)">MODEL</b> fitted to published ${CL.src} ranges for this season, not a live feed. EVA window = sun above 10° and air warmer than −45 °C.`;
+
+// click terrain → add custom stop (or open a photo pin)
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2(); let downAt = null;
+renderer.domElement.addEventListener('pointerdown', e => downAt = [e.clientX, e.clientY]);
+renderer.domElement.addEventListener('pointerup', e => {
+  if (mode !== 'plan' || !downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
+  mouse.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1); ray.setFromCamera(mouse, planCam);
+  if (photoPins.visible) { const ph = ray.intersectObjects(photoPins.children)[0]; if (ph) { openPhoto(ph.object.userData.photo); return; } }
+  const hit = ray.intersectObject(terrain)[0]; if (!hit) return;
+  customN++; const k = nearestK(hit.point.x, hit.point.z);
+  targets.push({ id: 'C' + customN, x: hit.point.x, z: hit.point.z, on: true, custom: true, tag: 'Custom', name: 'Custom stop',
+    why: `Slope ${SLOPE[k].toFixed(0)}° · ${MIN_INFO[CRISM[k]][0]} · ${SAND[k] > .5 ? 'soft soil' : 'firm'} · shelter ${(SHELTER[k] * 100).toFixed(0)}% · ${COMMS[k] ? 'comms ✓' : 'no comms'}` });
+  renderTargets(); refreshBeacons(); recompute();
+});
+
+/* =========================================================
+   9. First-person rehearsal / street view (helmet HUD)
+   ========================================================= */
+let mode = 'plan';
+const keys = {};
+const STREET_RATE = 24 / 1200;   // street view: one sol every 20 real minutes (≈10 min day + 10 min night)
+let streetPlay = true, warp = 1, infoOn = false;
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  keys[e.code] = true;
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
+  if (mode !== 'fp') return;
+  if (e.code === 'Escape') { if ($('debrief').style.display === 'flex') return; if (bigMapOpen) setBigMap(false); else if (openPhotoN >= 0) $('photoX').onclick(); else leaveFP(); }
+  if (rover.ended) return;
+  if (e.code === 'KeyM') setBigMap(!bigMapOpen);
+  if (e.code === 'KeyI') { infoOn = !infoOn; $('info').style.display = infoOn ? 'block' : 'none'; }
+  if (e.code === 'KeyF') { const n = nearPhoto(); if (n >= 0) openPhoto(n); else toast('No photo nearby', 'Walk to a 📷 pin (shown on the map) to see the real rover image taken there.'); }
+  if (e.code === 'KeyL' && !bigMapOpen) {
+    if (locked()) document.exitPointerLock();
+    else { const fail = () => toast('Mouse lock unavailable here', 'This browser frame blocks pointer lock. Drag to look around instead.'); try { const p = cvs.requestPointerLock?.(); if (p && p.catch) p.catch(fail); } catch (err) { fail(); } }
+  }
+  if (e.code === 'KeyT') { if (rover.street) togglePlay(); else { warp = warp === 1 ? 5 : warp === 5 ? 20 : 1; toast(`⏩ Time ×${warp}`, 'Everything runs faster: movement, mission clock, O₂ and the sun.'); } }
+  if (rover.street && e.code === 'BracketRight') rover.tod += 1;
+  if (rover.street && e.code === 'BracketLeft') rover.tod -= 1;
+  if (e.code === 'KeyP') {
+    if (rover.street || !hasRoute()) toast('No planned route in street view', 'Plan a route on the map, then use "Rehearse EVA" for autopilot.');
+    else { rover.auto = !rover.auto; if (!rover.auto) { rover.hd += rover.yawOff; rover.yawOff = 0; } }
+  }
+  if (e.code === 'KeyV') {
+    if (rover.roverDead && fpMob === 'walk') { toast('Rover battery is empty', 'The rover cannot move. Walk back to the habitat.'); return; }
+    setFpMob(fpMob === 'rover' ? 'walk' : 'rover');
+    toast(MOBILITY[fpMob].long, fpMob === 'walk' ? 'Eye height 1.7 m · ~1.4 m/s · steeper slopes OK · uses more O₂ uphill' : 'Eye height 2.6 m · up to ~6 m/s · slope limit 25° · can bog down in soft sand');
+  }
+});
+addEventListener('keyup', e => keys[e.code] = false);
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+function togglePlay() { streetPlay = !streetPlay; $('tPlay').textContent = streetPlay ? '⏸' : '▶'; }
+$('tPlay').onclick = togglePlay; $('tBack').onclick = () => rover.tod -= 1; $('tFwd').onclick = () => rover.tod += 1;
+$('endBtn').onclick = () => leaveFP();
+const rover = { x: 0, z: 0, hd: 0, v: 0, vs: 0, pitch: 0, look: 0, yawOff: 0, auto: false, prog: 0, next: 0, met: 0, dose: 0, odo: 0, done: false };
+
+const cvs = renderer.domElement;
+let dragging = false, dragMoved = 0, bigMapOpen = false;
+const locked = () => document.pointerLockElement === cvs;
+const groundRing = new THREE.Mesh(new THREE.RingGeometry(.7, 1, 40), new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: .85, depthTest: false }));
+groundRing.rotation.x = -Math.PI / 2; groundRing.renderOrder = 11; groundRing.visible = false; world.add(groundRing);
+function fpPick(cx, cy) {
+  if (locked()) mouse.set(0, 0); else mouse.set(cx / innerWidth * 2 - 1, -cy / innerHeight * 2 + 1);
+  ray.setFromCamera(mouse, fpCam);
+  const ph = photoPins.visible ? ray.intersectObjects(photoPins.children)[0] : null;
+  const h = ray.intersectObject(terrain)[0];
+  return { photo: ph && (!h || ph.distance < h.distance) ? ph.object.userData.photo : -1, ground: h && h.distance < 1500 ? h : null };
+}
+function showGroundRing(h) {
+  groundRing.visible = !!h;
+  if (h) { const s = clamp(h.distance * .03, .5, 14); groundRing.scale.set(s, s, s); groundRing.position.set(h.point.x, h.point.y + .05, h.point.z); }
+}
+cvs.addEventListener('mousedown', e => { if (mode !== 'fp' || e.button !== 0) return; dragging = true; dragMoved = 0; $('lockHint').style.display = 'none'; });
+addEventListener('mouseup', e => {
+  if (mode === 'fp' && !rover.ended && dragging && dragMoved < 6 && e.target === cvs) {
+    const h = fpPick(e.clientX, e.clientY); if (h.photo >= 0) openPhoto(h.photo); else if (h.ground) moveTo(h.ground.point.x, h.ground.point.z);
+  }
+  dragging = false;
+});
+addEventListener('mousemove', e => {
+  if (mode !== 'fp' || bigMapOpen || rover.ended) return;
+  if (locked() || dragging) {
+    dragMoved += Math.abs(e.movementX) + Math.abs(e.movementY);
+    if (!locked() && dragMoved < 6) return;
+    const dx = e.movementX * .0025, dy = e.movementY * .0025;
+    if (rover.auto) rover.yawOff += dx; else rover.hd += dx;
+    rover.look = clamp(rover.look - dy, -1.2, 1.2);
+  }
+  const h = locked() ? fpPick(0, 0) : (!dragging && e.target === cvs ? fpPick(e.clientX, e.clientY) : null);
+  showGroundRing(h && h.photo < 0 ? h.ground : null); cvs.style.cursor = h && h.photo >= 0 ? 'pointer' : '';
+});
+document.addEventListener('pointerlockchange', () => { $('crosshair').style.display = locked() && mode === 'fp' ? 'block' : 'none'; });
+function moveTo(x, z) {   // eased glide to a clicked point: a preview jump, not counted as travel
+  x = clamp(x, -W / 2 + 5, W / 2 - 5); z = clamp(z, -W / 2 + 5, W / 2 - 5);
+  rover.glide = { x0: rover.x, z0: rover.z, x1: x, z1: z, t: 0, dur: clamp(Math.hypot(x - rover.x, z - rover.z) / 80, .35, 1.4) };
+  rover.v = rover.vs = 0; rover.auto = false; rover.stuck = null;
+  if (!rover.street) logEv('Preview jump (not counted as travel)');
+}
+function setBigMap(o) {
+  bigMapOpen = o; $('bigMap').style.display = o ? 'flex' : 'none'; document.body.classList.toggle('bigmap', o);
+  if (o && locked()) document.exitPointerLock(); groundRing.visible = false; if (o) drawBigMap();
+}
+function bigToWorld(e) {
+  const b = $('bigCanvas').getBoundingClientRect(), u = (e.clientX - b.left) / b.width, v = (e.clientY - b.top) / b.height;
+  return u < 0 || u > 1 || v < 0 || v > 1 ? null : { x: -W / 2 + u * W, z: -W / 2 + v * W };
+}
+let fpMob = 'rover';
+function setFpMob(m) { fpMob = m; $('hBatK').textContent = MOBILITY[m].bat; }
+function nearPhoto() { let b = -1, bd = 25; PHOTOS.forEach((p, n) => { const d = Math.hypot(p.x - rover.x, p.z - rover.z); if (d < bd) { bd = d; b = n; } }); return b; }
+function logEv(txt) { if (rover.events) rover.events.push({ t: rover.met, ltst: rover.tod, txt }); }
+
+let prevLayer = 'optical';
+// opts.street: dropped by the pegman at (x, z) → free "street view" preview without consuming resources
+function enterFP(opts = {}) {
+  if (!opts.street && !hasRoute()) return;
+  $('debrief').style.display = 'none';
+  mode = 'fp'; cam = fpCam; controls.enabled = false; document.body.classList.add('fp');
+  $('panel').style.display = 'none'; labelBox.style.display = 'none'; $('hud').style.display = 'block'; $('photoCard').style.display = 'none'; openPhotoN = -1;
+  beacons.children.forEach(b => b.scale.set(.6, 3, .6)); layoutPins(true); profMarker.visible = false; pnrMarker.visible = false;
+  world.scale.y = 1; scene.background = null; sky.visible = stars.visible = true;
+  scene.fog = new THREE.Fog(0xdcae86, 120, 2600);
+  drawRoutes(true);
+  prevLayer = curLayer; if (curLayer !== 'optical') { curLayer = 'optical'; applyLayer(); }
+  $('lockHint').style.display = 'block'; warp = 1; streetPlay = true; $('tPlay').textContent = '⏸';
+  const base = { v: 0, vs: 0, look: 0, yawOff: 0, auto: false, next: 0, met: 0, dose: 0, odo: 0, o2: 0, bat: { rover: 0, walk: 0 }, done: false, ended: false,
+    visited: new Set(), bump: 0, bumps: 0, phase: 0, stuck: null, stuckN: 0, offRoute: 0, roverDead: false, events: [], flags: {}, glide: null };
+  if (opts.street) {
+    setFpMob('walk');
+    const near = nearestTarget(opts.x, opts.z), now = marsNow().ltst;
+    Object.assign(rover, base, { x: opts.x, z: opts.z, street: true, prog: 0, tod: now, hd: Math.atan2(near.x - opts.x, -(near.z - opts.z)) });
+    const [lon, lat] = lonLat(opts.x, opts.z), k = nearestK(opts.x, opts.z), night = sunAt(now).el < 0;
+    toast('🧍 Street view (preview)', `${lat.toFixed(4)}°, ${lon.toFixed(4)}°E · ${(H[k] + meta.hmin).toFixed(0)} m · real Mars time ${fmtClock(now)} LTST${night ? ' (night: press ] or ⏩ to skip ahead)' : ''} · resources are not used.`);
+  } else {
+    setFpMob(mob);
+    const i0 = Math.max(0, route.pts.findIndex(p => Math.hypot(p.x - BASE.x, p.z - BASE.z) > 25));
+    const p0 = route.pts[i0], p1 = route.pts[Math.min(i0 + 8, route.pts.length - 1)];
+    Object.assign(rover, base, { x: p0.x, z: p0.z, street: false, prog: i0, tod: evaStart, hd: Math.atan2(p1.x - p0.x, -(p1.z - p0.z)), plan: route });
+    logEv(`EVA start · ${MOBILITY[mob].long} · ${fmtClock(evaStart)} LTST`);
+    toast('EVA rehearsal started', `${MOBILITY[mob].long}: visit ${route.stops.map(t => t.id).join(' → ')}, then return. P = autopilot · T = time warp.`);
+  }
+  $('preview').style.display = rover.street ? 'block' : 'none';
+  ['mO2', 'mBat'].forEach(id => $(id).style.opacity = rover.street ? .35 : 1);
+  $('tCtl').style.display = rover.street ? '' : 'none'; $('endBtn').style.display = rover.street ? 'none' : '';
+}
+function nearestTarget(x, z) { let best = BASE, bd = Math.hypot(BASE.x - x, BASE.z - z); targets.forEach(t => { const d = Math.hypot(t.x - x, t.z - z); if (d < bd) { bd = d; best = t; } }); return best; }
+function leaveFP() {   // rehearsal with progress → debrief first
+  if (!rover.street && !rover.ended && rover.odo > 50) { endEVA('abort', 'EVA ended early by the crew'); return; }
+  exitFP();
+}
+function exitFP() {
+  mode = 'plan'; cam = planCam; controls.enabled = true; document.body.classList.remove('fp');
+  setBigMap(false); groundRing.visible = false; $('crosshair').style.display = 'none'; $('debrief').style.display = 'none';
+  if (document.pointerLockElement) document.exitPointerLock();
+  $('lockHint').style.display = 'none'; $('photoCard').style.display = 'none'; openPhotoN = -1;
+  $('panel').style.display = ''; labelBox.style.display = ''; $('hud').style.display = 'none';
+  beacons.children.forEach(b => b.scale.set(1, 1, 1)); layoutPins(false);
+  world.scale.y = VEX; scene.background = PLAN_BG; scene.fog = null; sky.visible = stars.visible = false;
+  rockChunks.forEach(m => m.visible = true);
+  drawRoutes(false);
+  if (prevLayer !== curLayer) { curLayer = prevLayer; applyLayer(); }
+  sun.shadow.normalBias = 0; placeSun(0, 0, 0, 1500); applyEnv(evaStart, false);
+}
+$('fpBtn').onclick = () => enterFP();
+
+function setCollapsed(c) {
+  document.body.classList.toggle('collapsed', c); $('panelToggle').textContent = c ? '☰ Panel' : '◀ Hide';
+  try { localStorage.setItem('mw-collapsed', c ? '1' : '0'); } catch (e) { }
+}
+$('panelToggle').onclick = () => setCollapsed(!document.body.classList.contains('collapsed'));
+try { if (localStorage.getItem('mw-collapsed') === '1') setCollapsed(true); } catch (e) { }
+
+// pegman: drag onto the terrain like Street View
+const pegRing = new THREE.Mesh(new THREE.RingGeometry(6, 10, 32), new THREE.MeshBasicMaterial({ color: 0xffd34f, side: THREE.DoubleSide, transparent: true, opacity: .85, depthTest: false }));
+pegRing.rotation.x = -Math.PI / 2; pegRing.visible = false; pegRing.renderOrder = 10; world.add(pegRing);
+let pegDrag = false, pegHit = null;
+function pegPick(e) {
+  const overUI = e.target.closest && e.target.closest('#panel, .fab, #hudL, #hudR, .bm-head, #photoCard');
+  const onBig = e.target === $('bigCanvas');
+  let hit = null;
+  if (onBig) { const p = bigToWorld(e); if (p) hit = { point: { x: p.x, z: p.z }, distance: 0 }; }
+  else if (!overUI && (mode === 'plan' || e.target === cvs)) {
+    mouse.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1);
+    ray.setFromCamera(mouse, mode === 'fp' ? fpCam : planCam); hit = ray.intersectObject(terrain)[0] || null;
+  }
+  pegHit = hit ? { x: hit.point.x, z: hit.point.z } : null;
+  pegRing.visible = !!pegHit && !onBig;
+  if (pegHit) {
+    const k = nearestK(pegHit.x, pegHit.z), [lon, lat] = lonLat(pegHit.x, pegHit.z);
+    pegRing.position.set(pegHit.x, heightAt(pegHit.x, pegHit.z) + .3, pegHit.z);
+    pegRing.scale.setScalar(mode === 'fp' ? clamp(hit.distance * .004, .06, 1.5) : 1);
+    $('pegInfo').innerHTML = `${lat.toFixed(4)}°, ${lon.toFixed(4)}°E · slope ${SLOPE[k].toFixed(0)}° · ${MIN_INFO[CRISM[k]][0]} · ${COMMS[k] ? '📡 ✓' : '📡 ✗'}`;
+    $('pegInfo').style.display = 'block';
+  } else $('pegInfo').style.display = 'none';
+  $('pegGhost').style.left = $('pegInfo').style.left = e.clientX + 'px';
+  $('pegGhost').style.top = $('pegInfo').style.top = e.clientY + 'px';
+}
+$('pegman').addEventListener('pointerdown', e => {
+  e.preventDefault(); pegDrag = true; downAt = null;
+  if (mode === 'plan') controls.enabled = false; if (locked()) document.exitPointerLock();
+  $('pegGhost').style.display = 'block'; $('pegman').style.opacity = .3; pegPick(e);
+});
+addEventListener('pointermove', e => { if (pegDrag) pegPick(e); });
+addEventListener('pointerup', e => {
+  if (!pegDrag) return;
+  pegDrag = false; pegRing.visible = false; $('pegGhost').style.display = $('pegInfo').style.display = 'none'; $('pegman').style.opacity = 1;
+  if (mode === 'fp') { if (pegHit) { moveTo(pegHit.x, pegHit.z); setBigMap(false); } }
+  else if (pegHit) enterFP({ street: true, x: pegHit.x, z: pegHit.z }); else controls.enabled = true;
+});
+
+let toastTimer = 0;
+function toast(t, s) { $('toastT').textContent = t; $('toastS').textContent = s; $('toast').style.display = 'block'; toastTimer = 5; }
+const angDiff = (a, b) => { let d = a - b; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
+function collide(r, M) {
+  let hit = false; const cx = Math.floor(r.x / ROCK_CELL), cz = Math.floor(r.z / ROCK_CELL);
+  for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) {
+    const list = rockHash.get((cx + a) + ',' + (cz + b)); if (!list) continue;
+    for (const o of list) {
+      if (o.h < M.stepOver) continue;
+      const dx = r.x - o.x, dz = r.z - o.z, d = Math.hypot(dx, dz), min = o.r + M.radius;
+      if (d < min && d > 1e-4) { r.x = o.x + dx / d * min; r.z = o.z + dz / d * min; hit = true; }
+    }
+  }
+  return hit;
+}
+const trapRnd = mulberry(7);
+function stepFP(dtReal) {
+  const r = rover;
+  if (r.ended) return;
+  const dt = dtReal * (r.street ? 1 : warp), M = MOBILITY[fpMob], R = !r.street && hasRoute() ? r.plan : null;
+  const fx = Math.sin(r.hd), fz = -Math.cos(r.hd), k = nearestK(r.x, r.z), sand = SAND[k];
+  const h0 = heightAt(r.x, r.z), slopeAhead = Math.atan2(heightAt(r.x + fx * 6, r.z + fz * 6) - h0, 6) / D2R;
+  // time of day: street view runs a compressed sol; rehearsal follows the mission clock
+  if (r.street) { if (streetPlay) r.tod += dtReal * STREET_RATE; } else r.tod = evaStart + r.met / SOL_H;
+  r.tod = ((r.tod % 24) + 24) % 24;
+  const wasDay = sunNow.el >= 0; applyEnv(r.tod, true); const night = sunNow.el < 0;
+  if (!r.street && wasDay && night && !r.flags.sunset) { r.flags.sunset = 1; toast('🌙 Sunset', `Air drops toward ${T_AIR[0].toFixed(0)} °C. Heaters now drain the batteries; speed limited for safety.`); logEv('Sunset: heaters on, speed limited'); }
+  const boost = keys.ShiftLeft || keys.ShiftRight ? 3 : 1;
+  const vmax = M.vmax * boost * (1 - (fpMob === 'rover' ? .55 : .25) * sand) * (1 - clamp(slopeAhead, 0, 35) / 50) * (night ? (fpMob === 'rover' ? .6 : .8) : 1);
+  let bd = 0;
+  if (R) { let best = r.prog; bd = Infinity; for (let i = r.prog; i < Math.min(R.pts.length, r.prog + 60); i++) { const d = Math.hypot(R.pts[i].x - r.x, R.pts[i].z - r.z); if (d < bd) { bd = d; best = i; } } r.prog = best; }
+  else r.auto = false;
+  let moved = 0;
+  if (r.glide) {
+    const g = r.glide; g.t = Math.min(1, g.t + dtReal / g.dur);
+    const e = g.t < .5 ? 2 * g.t * g.t : 1 - (-2 * g.t + 2) ** 2 / 2;
+    r.x = g.x0 + (g.x1 - g.x0) * e; r.z = g.z0 + (g.z1 - g.z0) * e;
+    if (g.t >= 1) { r.glide = null; collide(r, M); if (R) { let bi = 0, bdd = Infinity; R.pts.forEach((p, i) => { const d = Math.hypot(p.x - r.x, p.z - r.z); if (d < bdd) { bdd = d; bi = i; } }); r.prog = bi; } }
+  } else if (r.stuck) {   // embedded in soft sand: back out slowly (costs time)
+    r.v = r.vs = 0;
+    if (r.auto || keys.KeyS || keys.ArrowDown) r.stuck.t += dtReal;
+    $('stuckBar').style.width = clamp(r.stuck.t / 4, 0, 1) * 100 + '%';
+    $('stuckTxt').textContent = r.auto ? 'Autopilot is rocking the wheels free…' : 'Hold S to reverse out slowly';
+    if (r.stuck.t >= 4) {
+      r.x -= fx * 4; r.z -= fz * 4; r.met += .5; r.stuck = null;
+      toast('✓ Free again', 'Backing out took ~30 min of mission time. Soft, dark sand with a cold THEMIS signature is the warning sign.'); logEv('Freed from sand (+30 min)');
+    }
+  } else {
+    let turn = 0;
+    if (r.auto) {
+      const t = R.pts[Math.min(R.pts.length - 1, r.prog + 5)], want = Math.atan2(t.x - r.x, -(t.z - r.z));
+      turn = clamp(angDiff(want, r.hd) * 3, -1, 1);
+      r.v += (vmax * .9 - r.v) * Math.min(1, dt * 1.2); if (r.prog >= R.pts.length - 2) r.v -= 6 * dt;
+      r.v = clamp(r.v, 0, vmax); r.vs -= r.vs * Math.min(1, dt * 3);
+    } else {
+      const fwd = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0), side = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0);
+      turn = (keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0);
+      r.v += (fwd * (fwd > 0 ? vmax : vmax * .5) - r.v) * Math.min(1, dt * 1.5);
+      r.vs += (side * vmax * .6 - r.vs) * Math.min(1, dt * 2);
+    }
+    if (slopeAhead > M.limit && r.v > 0) r.v = Math.min(r.v, .3);
+    r.hd += turn * dt * 1.4;
+    if (!r.auto) r.yawOff -= r.yawOff * Math.min(1, dt * 4);
+    const ox = r.x, oz = r.z, rx = Math.cos(r.hd), rz = Math.sin(r.hd);
+    r.x = clamp(r.x + (fx * r.v + rx * r.vs) * dt, -W / 2 + 5, W / 2 - 5);
+    r.z = clamp(r.z + (fz * r.v + rz * r.vs) * dt, -W / 2 + 5, W / 2 - 5);
+    if (collide(r, M)) { if (r.bump <= 0) { r.bumps++; } r.bump = .6; r.v *= .9; r.vs *= .9; }
+    r.bump = Math.max(0, r.bump - dt);
+    moved = Math.hypot(r.x - ox, r.z - oz); r.odo += moved;
+    // soft-sand trap (rover only, rehearsal only) — same per-metre risk the planner uses
+    if (!r.street && fpMob === 'rover' && Math.abs(r.v) > 1 && trapRnd() < BOG_P(k) * moved) {
+      r.stuck = { t: 0 }; r.stuckN++; r.v = r.vs = 0; logEv('Rover bogged down in soft sand');
+    }
+  }
+  // resources (rehearsal only): mission clock follows distance at nominal speed (matches the planner)
+  if (!r.street) {
+    const dH = moved > .01 ? moved / 1000 / SPEED(SLOPE[k], sand, fpMob) : dt / 3600 * 3;
+    r.met += dH; r.dose += dH * DOSE_RATE(SHELTER[k]); r.o2 += dH * O2_RATE(fpMob, SLOPE[k], sand);
+    r.bat[fpMob] += moved / M.batRange + dH * HEATER(r.tod); if (fpMob === 'rover') r.bat.walk += dH * HEATER(r.tod) * .5;
+    if (R && bd > 40) r.offRoute += moved;
+    if (r.bat.rover >= 1 && !r.roverDead) { r.roverDead = true; setFpMob('walk'); toast('🔋 Rover battery empty', 'The rover is stranded. You must walk back: check WALK-BACK vs O₂ on the right.'); logEv('Rover battery depleted: walking back'); }
+    // comms events with hysteresis (state must hold for 60 m) so short shadows don't spam the log
+    r.commRun = (COMMS[k] ? 1 : -1) === Math.sign(r.commRun || 0) ? r.commRun + (COMMS[k] ? moved : -moved) : (COMMS[k] ? moved : -moved);
+    if (r.commRun < -60 && !r.flags.noComm) { r.flags.noComm = 1; logEv('Lost line of sight to habitat'); }
+    if (r.commRun > 60 && r.flags.noComm) { r.flags.noComm = 0; logEv('Comms restored'); }
+    const wbNeed = WALKBACK[k] * 1.25 + .5;
+    if (fpMob === 'rover' && wbNeed > EVA_LIMIT - r.o2 && !r.flags.wb) { r.flags.wb = 1; logEv('Passed the walk-back limit'); }
+    if (r.o2 >= EVA_LIMIT) return endEVA('fail', 'O₂ depleted');
+    if (r.bat.walk >= 1) return endEVA('fail', 'Suit battery depleted');
+  }
+  // camera
+  const hh = heightAt(r.x, r.z), tgtPitch = Math.atan2(heightAt(r.x + fx * 8, r.z + fz * 8) - hh, 8);
+  r.pitch += (tgtPitch - r.pitch) * Math.min(1, dt * 4);
+  const spd = Math.hypot(r.v, r.vs) / boost; r.phase += spd * dt * 5.5;
+  const bob = fpMob === 'walk' ? Math.sin(r.phase) * .045 * Math.min(1, spd) : 0;
+  fpCam.position.set(r.x, hh + M.eye + bob, r.z);
+  fpCam.rotation.set(r.look + r.pitch * .6 - .06, -(r.hd + r.yawOff), 0, 'YXZ');
+  sky.position.copy(fpCam.position); stars.position.copy(fpCam.position);
+  // only draw rock chunks near the player (the rest are invisible at this distance anyway)
+  let shown = 0; rockChunks.forEach(m => { m.visible = Math.hypot(m.userData.cx - r.x, m.userData.cz - r.z) < 700; if (m.visible) shown++; });
+  placeSun(r.x, hh, r.z, 160); sun.shadow.normalBias = .05;
+  // stops
+  let nextT = R ? (r.next < R.stops.length ? R.stops[r.next] : BASE) : nearestTarget(r.x, r.z);
+  const dNext = Math.hypot(nextT.x - r.x, nextT.z - r.z);
+  if (!R) { if (dNext < 22 && nextT !== BASE && !r.visited.has(nextT.id)) { r.visited.add(nextT.id); toast(`✓ Reached ${nextT.id} ${nextT.name}`, nextT.why); } }
+  else if (!r.done && dNext < 22) {
+    if (r.next < R.stops.length) {
+      toast(`✓ Reached ${nextT.id} ${nextT.name}`, `${nextT.why} (science work: ${STOP_MIN} min added)`);
+      r.met += STOP_MIN / 60; r.o2 += STOP_MIN / 60; r.dose += STOP_MIN / 60 * DOSE_RATE(SHELTER[k]); r.next++; logEv(`Reached ${nextT.id} ${nextT.name}`);
+    } else if (r.odo > 100) { r.done = true; r.auto = false; logEv('Back at the habitat'); return endEVA('complete', 'Safely back at the habitat'); }
+  }
+  // HUD
+  const o2 = clamp(100 * (1 - r.o2 / EVA_LIMIT), 0, 100), bat = clamp(100 * (1 - r.bat[fpMob]), 0, 100), [lon, lat] = lonLat(r.x, r.z);
+  $('hO2').textContent = r.street ? '—' : o2.toFixed(0) + '%'; $('bO2').style.width = (r.street ? 100 : o2) + '%';
+  $('hBat').textContent = r.street ? '—' : bat.toFixed(0) + '%'; $('bBat').style.width = (r.street ? 100 : bat) + '%';
+  $('mO2').classList.toggle('low', !r.street && o2 < 20); $('mBat').classList.toggle('low', !r.street && bat < 20);
+  $('hMet').textContent = r.street ? '—' : fmtT(r.met); $('hDose').textContent = r.street ? '—' : r.dose.toFixed(2) + ' mSv';
+  $('hTime').innerHTML = `${night ? '🌙' : '☀'} ${fmtClock(r.tod)} LTST · ${airTemp(r.tod).toFixed(0)} °C`;
+  $('tWarp').textContent = !r.street && warp > 1 ? `⏩ ×${warp}` : '';
+  $('hNext').textContent = `${R ? '' : 'Nearest '}${nextT.id || '⌂'} ${nextT.name}`;
+  $('hDist').textContent = dNext.toFixed(0) + ' m';
+  const brg = Math.atan2(nextT.x - r.x, -(nextT.z - r.z));
+  $('arrow').style.transform = `rotate(${angDiff(brg, r.hd + r.yawOff)}rad)`;
+  $('hSpd').textContent = `${Math.abs(r.v).toFixed(1)} m/s · ${slopeAhead.toFixed(0)}°`;
+  $('hGround').textContent = `${MIN_INFO[CRISM[k]][0]} · ${sand > .5 ? 'soft' : ROCK[k] > .5 ? 'rocky' : 'firm'}`;
+  const wbH = WALKBACK[k];
+  $('hComm').innerHTML = `${COMMS[k] ? '📡 LINK' : '📡 <span style="color:#ff9a9a">NO LOS</span>'} · 🚶 ${wbH === Infinity ? '—' : fmtT(wbH) + ' h'}`;
+  $('ap').style.display = r.auto ? 'block' : 'none';
+  $('stuck').style.display = r.stuck ? 'block' : 'none';
+  const w = [];
+  if (Math.abs(slopeAhead) > M.limit) w.push(['x', `⛔ Slope ${slopeAhead.toFixed(0)}° exceeds the ${fpMob === 'walk' ? 'walking' : 'rover'} limit`]);
+  else if (Math.abs(slopeAhead) > 15) w.push(['w', `⚠ Slope ${slopeAhead.toFixed(0)}°: caution`]);
+  if (sand > .5) w.push(['w', fpMob === 'walk' ? '⚠ Soft sand: tiring, more O₂' : '⚠ Soft sand: risk of bogging down']);
+  if (ROCK[k] > .6) w.push(['w', '⚠ Dense boulder field']);
+  if (r.bump > 0) w.push(['x', '💥 Hit a rock']);
+  if (night) w.push(['w', `🌙 Night ${airTemp(r.tod).toFixed(0)} °C · lamp on`]);
+  if (!r.street) {
+    if (R && bd > 40 && !r.done) w.push(['w', `↺ Off planned route by ${bd.toFixed(0)} m`]);
+    if (o2 < 20) w.push(['x', 'O₂ below 20%: return now']);
+    if (fpMob === 'rover' && wbH * 1.25 + .5 > EVA_LIMIT - r.o2) w.push(['x', '🚶 Beyond walk-back limit']);
+    if (!COMMS[k]) w.push(['w', '📡 No line of sight to habitat']);
+  }
+  const np = nearPhoto(); if (np >= 0 && openPhotoN !== np) w.push(['i', `📷 Real ${SITE.rover} photo here (Sol ${PHOTOS[np].sol}) · press F`]);
+  if (spe) w.push(['x', `☢ SPE alert · shelter ${(SHELTER[k] * 100).toFixed(0)}%`]);
+  $('warns').innerHTML = w.map(([c, t]) => `<div class="${c}">${t}</div>`).join('');
+  if (infoOn) $('info').innerHTML = `Render: ${renderer.info.render.calls} draw calls · ${(renderer.info.render.triangles / 1000).toFixed(0)}k triangles<br>Rock chunks drawn: ${shown}/${rockChunks.length} (frustum + 700 m distance cull)<br>Rocks in site: ${ROCK_TOTAL.toLocaleString()} · fog hides > 2.6 km<br>Mars horizon at eye height: ${(Math.sqrt(2 * 3389500 * M.eye) / 1000).toFixed(1)} km`;
+  drawCompass(r.hd + r.yawOff, brg); drawMini(); if (bigMapOpen) drawBigMap();
+  if (toastTimer > 0 && (toastTimer -= dtReal) <= 0) $('toast').style.display = 'none';
+}
+function drawCompass(hd, brg) {
+  const cv = $('compass'), g = cv.getContext('2d'), w = cv.width, ppd = w / 120, deg = hd / D2R;
+  g.clearRect(0, 0, w, cv.height); g.strokeStyle = g.fillStyle = '#9ff3ff'; g.font = '13px sans-serif'; g.textAlign = 'center';
+  for (let d = Math.ceil((deg - 60) / 5) * 5; d <= deg + 60; d += 5) {
+    const x = w / 2 + (d - deg) * ppd, n = ((d % 360) + 360) % 360; g.globalAlpha = 1 - Math.abs(d - deg) / 65;
+    g.beginPath(); g.moveTo(x, 28); g.lineTo(x, n % 15 ? 34 : 24); g.stroke();
+    if (n % 45 === 0) g.fillText({ 0: 'N', 45: 'NE', 90: 'E', 135: 'SE', 180: 'S', 225: 'SW', 270: 'W', 315: 'NW' }[n], x, 18);
+  }
+  g.globalAlpha = 1;
+  const rel = angDiff(brg, hd) / D2R;
+  if (Math.abs(rel) < 60) { const x = w / 2 + rel * ppd; g.fillStyle = '#ffd34f'; g.beginPath(); g.moveTo(x, 38); g.lineTo(x - 6, 30); g.lineTo(x + 6, 30); g.fill(); }
+  // sun marker on the compass
+  const srel = angDiff(sunNow.az, hd) / D2R;
+  if (sunNow.el > 0 && Math.abs(srel) < 60) { g.fillStyle = '#ffd34f'; g.fillText('☀', w / 2 + srel * ppd, 38); }
+  g.fillStyle = '#9ff3ff'; g.fillText(String(Math.round(((deg % 360) + 360) % 360)).padStart(3, '0') + '°', w / 2, 10);
+}
+function drawMini() {
+  const cv = $('mini'), g = cv.getContext('2d'), S = cv.width, Rr = 350, sc = S / (2 * Rr);
+  g.save(); g.clearRect(0, 0, S, S); g.beginPath(); g.arc(S / 2, S / 2, S / 2, 0, Math.PI * 2); g.clip();
+  g.translate(S / 2, S / 2); g.rotate(-rover.hd); g.scale(sc, sc); g.translate(-rover.x, -rover.z);
+  g.globalAlpha = .85; g.drawImage(miniImg, -W / 2, -W / 2, W, W); g.globalAlpha = 1;
+  if (hasRoute() && !rover.street) { g.strokeStyle = '#4fd6ff'; g.lineWidth = 3 / sc; g.beginPath(); rover.plan.pts.forEach((p, i) => i ? g.lineTo(p.x, p.z) : g.moveTo(p.x, p.z)); g.stroke(); }
+  [...(hasRoute() && !rover.street ? rover.plan.stops : targets), BASE].forEach(t => { g.fillStyle = t === BASE ? '#fff' : '#ffd34f'; g.beginPath(); g.arc(t.x, t.z, 6 / sc, 0, Math.PI * 2); g.fill(); });
+  if (photoPins.visible) PHOTOS.forEach(p => { g.fillStyle = '#e8562a'; g.beginPath(); g.arc(p.x, p.z, 4 / sc, 0, Math.PI * 2); g.fill(); });
+  g.restore();
+  g.fillStyle = '#9ff3ff'; g.beginPath(); g.moveTo(S / 2, S / 2 - 8); g.lineTo(S / 2 - 6, S / 2 + 6); g.lineTo(S / 2 + 6, S / 2 + 6); g.fill();
+}
+function drawBigMap() {
+  const cv = $('bigCanvas'), g = cv.getContext('2d'), S = cv.width, k = S / W, Pp = (x, z) => [(x + W / 2) * k, (z + W / 2) * k];
+  g.clearRect(0, 0, S, S); g.drawImage(orthoTex.image, 0, 0, S, S);
+  g.globalCompositeOperation = 'multiply'; g.fillStyle = 'rgb(255,190,150)'; g.fillRect(0, 0, S, S); g.globalCompositeOperation = 'source-over';
+  g.strokeStyle = '#ffffff22'; g.lineWidth = 1; g.font = '13px sans-serif'; g.fillStyle = '#ffffffaa';
+  for (let m = -1000; m <= 1000; m += 500) { const [p] = Pp(m, 0); g.beginPath(); g.moveTo(p, 0); g.lineTo(p, S); g.moveTo(0, p); g.lineTo(S, p); g.stroke(); }
+  g.fillRect(20, S - 30, 500 * k, 4); g.fillText('500 m', 20, S - 38); g.fillText('N', S - 34, 44);
+  g.beginPath(); g.moveTo(S - 29, 14); g.lineTo(S - 36, 28); g.lineTo(S - 22, 28); g.fill();
+  if (hasRoute() && !rover.street) { g.strokeStyle = '#4fd6ff'; g.lineWidth = 4; g.beginPath(); rover.plan.pts.forEach((p, i) => { const [x, y] = Pp(p.x, p.z); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke(); }
+  if (photoPins.visible) PHOTOS.forEach(p => { const [x, y] = Pp(p.x, p.z); g.fillStyle = '#e8562a'; g.beginPath(); g.arc(x, y, 5, 0, Math.PI * 2); g.fill(); });
+  g.font = 'bold 15px sans-serif';
+  [...targets, BASE].forEach(t => {
+    const [x, y] = Pp(t.x, t.z); g.fillStyle = t === BASE ? '#fff' : t.on ? '#ffd34f' : '#aaa';
+    g.beginPath(); g.arc(x, y, 7, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#000a'; const label = t === BASE ? '⌂ Habitat' : `${t.id} ${t.name}`, w = g.measureText(label).width;
+    g.fillRect(x + 10, y - 11, w + 8, 20); g.fillStyle = '#fff'; g.fillText(label, x + 14, y + 5);
+  });
+  const [px, py] = Pp(rover.x, rover.z), hd = rover.hd + rover.yawOff, fov = 35 * D2R;
+  g.fillStyle = '#9ff3ff44'; g.beginPath(); g.moveTo(px, py); g.arc(px, py, 70, hd - Math.PI / 2 - fov, hd - Math.PI / 2 + fov); g.closePath(); g.fill();
+  g.save(); g.translate(px, py); g.rotate(hd); g.fillStyle = '#9ff3ff'; g.strokeStyle = '#000'; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(0, -14); g.lineTo(-9, 10); g.lineTo(9, 10); g.closePath(); g.fill(); g.stroke(); g.restore();
+}
+$('mini').addEventListener('click', () => setBigMap(true));
+$('bmClose').addEventListener('click', () => setBigMap(false));
+$('bigCanvas').addEventListener('click', e => { const p = bigToWorld(e); if (p) moveTo(p.x, p.z); });
+
+/* =========================================================
+   10. Debrief + export
+   ========================================================= */
+let lastReport = null;
+function endEVA(outcome, reason) {
+  const r = rover; if (r.ended) return; r.ended = true; r.auto = false;
+  if (locked()) document.exitPointerLock(); setBigMap(false);
+  const plan = r.plan, missed = plan.stops.length - r.next;
+  let s = 100;
+  s -= clamp((r.met - plan.time) / plan.time * 100, 0, 60) * .4;
+  s -= Math.min(15, r.bumps * 1.5) + r.stuckN * 8 + clamp(r.offRoute / Math.max(1, r.odo), 0, 1) * 25 + Math.max(0, r.dose - plan.dose) * 20 + missed * 12;
+  if (EVA_LIMIT - r.o2 < 1) s -= 10;
+  if (outcome === 'fail') s = Math.min(s, 25); if (outcome === 'abort') s = Math.min(s, 60);
+  s = Math.round(clamp(s, 0, 100));
+  const grade = s >= 90 ? 'A' : s >= 75 ? 'B' : s >= 60 ? 'C' : s >= 40 ? 'D' : 'F';
+  const color = outcome === 'complete' ? (s >= 75 ? '#5cf29a' : '#ffb547') : '#ff6b6b';
+  lastReport = {
+    site: SITE.name, outcome, reason, score: s, grade, mobility: MOBILITY[mob].long, profile: PROFILES[curProfile].name,
+    start_ltst: fmtClock(evaStart), end_ltst: fmtClock(r.tod),
+    planned: { time_h: +plan.time.toFixed(2), distance_km: +(plan.dist / 1000).toFixed(2), dose_mSv: +plan.dose.toFixed(2), o2_used_h: +plan.o2.toFixed(2), stops: plan.stops.map(t => t.id) },
+    actual: { time_h: +r.met.toFixed(2), distance_km: +(r.odo / 1000).toFixed(2), dose_mSv: +r.dose.toFixed(2), o2_used_h: +r.o2.toFixed(2), stops_reached: r.next, rock_hits: r.bumps, sand_traps: r.stuckN, off_route_m: Math.round(r.offRoute) },
+    events: r.events.map(e => ({ mission_time: fmtT(e.t), ltst: fmtClock(e.ltst), event: e.txt })),
+  };
+  const row = (k, a, b) => `<tr><td>${k}</td><td>${a}</td><td>${b}</td></tr>`;
+  $('dbBody').innerHTML = `
+    <div class="db-top"><div class="grade" style="background:${color}22;color:${color};border:1px solid ${color}66"><b>${grade}</b><span>${s}/100</span></div>
+      <div><h2>${outcome === 'complete' ? '🏁 EVA complete' : outcome === 'fail' ? '❌ EVA failed' : '⏹ EVA aborted'}</h2>
+      <div class="hint" style="font-size:13px">${reason} · ${SITE.name} · ${MOBILITY[mob].long} · ${fmtClock(evaStart)} → ${fmtClock(r.tod)} LTST</div></div></div>
+    <table><tr><th></th><th>Planned</th><th>Actual</th></tr>
+      ${row('Mission time', fmtT(plan.time) + ' h', fmtT(r.met) + ' h')}
+      ${row('Distance', (plan.dist / 1000).toFixed(2) + ' km', (r.odo / 1000).toFixed(2) + ' km')}
+      ${row('O₂ used', fmtT(plan.o2) + ' h', fmtT(r.o2) + ' h')}
+      ${row('Radiation dose', plan.dose.toFixed(2) + ' mSv', r.dose.toFixed(2) + ' mSv')}
+      ${row('Science stops', plan.stops.length, r.next)}
+      ${row('Rock hits · sand traps', '—', `${r.bumps} · ${r.stuckN}`)}
+      ${row('Off planned route', '—', Math.round(r.offRoute) + ' m')}</table>
+    <div class="timeline">${r.events.map(e => `<div><b>${fmtT(e.t)}</b>${e.txt}</div>`).join('')}</div>
+    <div class="db-btns"><button class="btn" id="dbRetry">↻ Retry</button><button class="ghost" id="dbBack">◀ Planner</button>
+      <button class="ghost" id="dbJson">⬇ Report JSON</button><button class="ghost" id="dbPrint">🖨 EVA card</button></div>`;
+  $('debrief').style.display = 'flex';
+  $('dbRetry').onclick = () => enterFP(); $('dbBack').onclick = () => exitFP();
+  $('dbJson').onclick = () => download(`marswalk_${SITE_ID}_report.json`, JSON.stringify(lastReport, null, 1), 'application/json');
+  $('dbPrint').onclick = () => printCard(lastReport);
+}
+function download(name, text, type) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+$('exportBtn').onclick = e => { e.stopPropagation(); $('exportMenu').style.display = $('exportMenu').style.display === 'block' ? 'none' : 'block'; };
+addEventListener('click', () => $('exportMenu').style.display = 'none');
+$('expGeo').onclick = () => {
+  if (!hasRoute()) return toast('No route', 'Select at least one reachable stop first.');
+  const ll = p => { const [lon, lat] = lonLat(p.x, p.z); return [+lon.toFixed(6), +lat.toFixed(6), +(heightAt(p.x, p.z) + meta.hmin).toFixed(1)]; };
+  const fc = { type: 'FeatureCollection', crs_note: 'Mars 2015 sphere (IAU 49900), planetocentric, east longitude', features: [
+    { type: 'Feature', geometry: { type: 'LineString', coordinates: route.pts.filter((_, i) => i % 3 === 0).map(ll) },
+      properties: { site: SITE.name, mobility: MOBILITY[mob].long, profile: PROFILES[curProfile].name, start_ltst: fmtClock(evaStart), distance_km: +(route.dist / 1000).toFixed(2),
+        duration_h: +route.time.toFixed(2), dose_mSv: +route.dose.toFixed(2), o2_margin_h: +(EVA_LIMIT - route.o2).toFixed(2), bog_risk: +route.bogRisk.toFixed(3), no_comms_pct: +route.noCommPct.toFixed(1) } },
+    { type: 'Feature', geometry: { type: 'Point', coordinates: ll(BASE) }, properties: { name: BASE.name, kind: 'habitat' } },
+    ...route.stops.map(t => ({ type: 'Feature', geometry: { type: 'Point', coordinates: ll(t) }, properties: { id: t.id, name: t.name, kind: 'stop' } })),
+    ...(route.pnr >= 0 && route.m === 'rover' ? [{ type: 'Feature', geometry: { type: 'Point', coordinates: ll(route.pts[route.pnr]) }, properties: { kind: 'walk-back limit' } }] : []),
+  ] };
+  download(`marswalk_${SITE_ID}_route.geojson`, JSON.stringify(fc, null, 1), 'application/geo+json');
+};
+$('expPrint').onclick = () => printCard(null);
+function printCard(report) {
+  if (!hasRoute()) return;
+  const was = { m: mode }; if (mode === 'plan') { renderer.render(scene, planCam); }
+  const img = mode === 'plan' ? renderer.domElement.toDataURL('image/jpeg', .85) : '';
+  const r = route, w = window.open('', '_blank'); if (!w) return toast('Pop-up blocked', 'Allow pop-ups to print the EVA card.');
+  const rows = [['Site', SITE.name], ['Mobility · priority', `${MOBILITY[mob].long} · ${PROFILES[curProfile].name}`], ['Start → back', `${fmtClock(evaStart)} → ${fmtClock(evaStart + r.time / SOL_H)} LTST (sunset ${fmtClock(SUNSET)})`],
+    ['Distance · duration', `${(r.dist / 1000).toFixed(2)} km · ${fmtT(r.time)} h`], ['O₂ margin', fmtT(EVA_LIMIT - r.o2) + ' h'], ['Dose', r.dose.toFixed(2) + ' mSv'],
+    ['Max slope', r.maxS.toFixed(0) + '°'], ['Bog-down risk', r.m === 'rover' ? (r.bogRisk * 100).toFixed(0) + '%' : 'n/a (walking)'], ['No comms', r.noCommPct.toFixed(0) + '% of route'],
+    ['Walk-back limit', r.m === 'rover' ? (r.pnr >= 0 ? `exceeded at ${(r.pts[r.pnr].d / 1000).toFixed(1)} km` : 'never exceeded') : 'n/a'], ['Air temperature', `${T_AIR[0].toFixed(0)} … ${T_AIR[1].toFixed(0)} °C`]];
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>EVA card · ${SITE.name}</title><style>
+    body{font:13px/1.5 -apple-system,system-ui,sans-serif;margin:28px;color:#111} h1{margin:0 0 4px} .s{color:#666} img{width:100%;border-radius:8px;margin:12px 0}
+    table{border-collapse:collapse;width:100%} td{border-bottom:1px solid #ddd;padding:5px 6px} td:first-child{color:#555;width:38%} ol{padding-left:20px}
+  </style></head><body><h1>EVA card · ${SITE.name}</h1><div class="s">Marswalk planner · Sol ${NOW0.sol} (${SITE.rover} count) · Ls ${Ls.toFixed(0)}° · printed ${new Date().toISOString().slice(0, 10)}</div>
+  ${img ? `<img src="${img}">` : ''}
+  <table>${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>
+  <h3>Stops</h3><ol>${r.stops.map(t => `<li><b>${t.id} ${t.name}</b> — ${t.why}</li>`).join('')}<li>Return to ${BASE.name}</li></ol>
+  ${report ? `<h3>Rehearsal debrief: ${report.grade} (${report.score}/100) · ${report.reason}</h3><ol>${report.events.map(e => `<li>${e.mission_time} — ${e.event}</li>`).join('')}</ol>` : ''}
+  <p class="s">Terrain: HiRISE DTM ${meta.product}. Soft soil: THEMIS night IR + HiRISE albedo. Minerals: CRISM. Weather values are a climatology model.</p>
+  <script>setTimeout(()=>print(),300)<\/script></body></html>`);
+  w.document.close();
+}
+
+/* =========================================================
+   11. Main loop
+   ========================================================= */
+const v3 = new THREE.Vector3();
+function updateLabels() {
+  labels.forEach(({ el, v }) => {
+    v3.copy(v).project(planCam); const vis = v3.z < 1 && Math.abs(v3.x) < 1.1 && Math.abs(v3.y) < 1.1;
+    el.style.display = vis ? '' : 'none'; if (vis) { el.style.left = (v3.x + 1) / 2 * innerWidth + 'px'; el.style.top = (1 - v3.y) / 2 * innerHeight + 'px'; }
+  });
+}
+const pf = new THREE.Vector3(), pr = new THREE.Vector3();
+function panPlan(dt) {
+  const f = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0), s = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
+  if (!f && !s) return;
+  planCam.getWorldDirection(pf); pf.y = 0; pf.normalize(); pr.set(-pf.z, 0, pf.x);
+  const sp = planCam.position.distanceTo(controls.target) * .7 * dt * (keys.ShiftLeft || keys.ShiftRight ? 2.5 : 1);
+  const d = pf.multiplyScalar(f * sp).add(pr.multiplyScalar(s * sp)), t = controls.target.clone().add(d);
+  t.x = clamp(t.x, -W / 2, W / 2); t.z = clamp(t.z, -W / 2, W / 2); d.subVectors(t, controls.target); controls.target.add(d); planCam.position.add(d);
+}
+let last = performance.now(), nowTimer = 0;
+renderer.setAnimationLoop(() => {
+  const now = performance.now(), dt = Math.min(.05, (now - last) / 1000); last = now;
+  if (mode === 'plan') { panPlan(dt); controls.update(); updateLabels(); } else stepFP(dt);
+  if ((nowTimer -= dt) <= 0) { nowTimer = 1; updateNow(); }
+  renderer.render(scene, cam);
+});
+renderer.domElement.addEventListener('webglcontextlost', e => { e.preventDefault(); $('glLost').style.display = 'flex'; });
+renderer.domElement.addEventListener('webglcontextrestored', () => { $('glLost').style.display = 'none'; });
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); [planCam, fpCam].forEach(c => { c.aspect = innerWidth / innerHeight; c.updateProjectionMatrix(); }); });
+
+applyLayer(); renderTargets(); refreshBeacons(); setSegs(); setStart(evaStart, false); updateNow();
+if (qs.has('debug')) window.__mw = { rover, setLayer: k => { curLayer = k; applyLayer(); }, LAYERS, enterFP, exitFP, endEVA, route: () => route, SLOPE, SAND, THM, CRISM, COMMS, WALKBACK, nearestK, kX, kZ, V, marsNow, sunAt, airTemp, WIN,
+  step: (dt, draw = false) => { stepFP(dt); if (draw) renderer.render(scene, cam); }, setStart, keys, setWarp: w => warp = w };
+</script>
+</body>
+</html>

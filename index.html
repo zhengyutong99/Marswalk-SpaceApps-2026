@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Marswalk · Mars Globe</title>
+<style>
+  :root{ --panel:#16100eee; --card:#211814; --sunk:#110c0a; --line:#3a2b24; --hair:#ffffff0d; --text:#f5eae1; --muted:#a8968a; --faint:#7a6a60;
+    --accent:#4fd6ff; --ink:#04212b; --gold:#ffd34f; --good:#5cf29a; }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#050304;color:var(--text);overflow:hidden;
+    font:13px/1.45 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",system-ui,sans-serif}
+  canvas{display:block}
+  .panel{position:absolute;background:var(--panel);border:1px solid var(--line);border-radius:18px;backdrop-filter:blur(10px);box-shadow:0 20px 50px #0008;z-index:5}
+  #left{top:12px;left:12px;bottom:12px;width:360px;max-width:calc(100vw - 24px);display:flex;flex-direction:column;overflow:hidden}
+  .head{padding:16px 16px 6px}
+  .brand{display:flex;align-items:center;gap:8px}
+  .logo{width:26px;height:26px;border-radius:8px;background:conic-gradient(from 200deg,#ff8a4c,#c2452d,#5a1e14,#ff8a4c);box-shadow:inset 0 0 0 1px #fff2}
+  h1{font-size:22px;margin:14px 0 4px}
+  .sub{color:var(--muted);font-size:12.5px}
+  .body{flex:1;overflow:auto;padding:10px 16px 16px;display:flex;flex-direction:column;gap:12px;scrollbar-width:thin}
+  .card{background:var(--card);border:1px solid var(--hair);border-radius:14px;padding:12px}
+  .card h2{margin:0 0 8px;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted)}
+  .site{display:grid;grid-template-columns:10px 1fr auto;gap:10px;align-items:center;padding:8px 6px;border-radius:10px;cursor:pointer}
+  .site:hover,.site.sel{background:#ffffff08}
+  .site i{width:10px;height:10px;border-radius:50%;background:var(--gold);box-shadow:0 0 10px var(--gold)}
+  .site.off i{background:#6b5d55;box-shadow:none}
+  .site .n{font-weight:600}
+  .site .m{font-size:11px;color:var(--muted)}
+  .site .go{font-size:11px;font-weight:700;color:var(--accent)}
+  .site.off .go{color:var(--faint);font-weight:500}
+  .seg{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--sunk);padding:3px;border-radius:10px}
+  .seg button{border:0;background:none;color:var(--muted);padding:7px;border-radius:7px;cursor:pointer;font:inherit;font-weight:600}
+  .seg button.on{background:var(--accent);color:var(--ink)}
+  .lod{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:12px}
+  .lod b{color:var(--accent);font-variant-numeric:tabular-nums;text-align:right}
+  .hint{font-size:11px;color:var(--muted)}
+  #detail{right:12px;top:12px;width:340px;max-width:calc(100vw - 24px);padding:16px;display:none}
+  #detail h3{margin:0;font-size:20px}
+  #detail .m{color:var(--muted);font-size:12px;margin:2px 0 10px}
+  .thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}
+  .thumbs img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;background:#000}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12px}
+  .kv span:nth-child(odd){color:var(--faint)}
+  .btn{display:block;width:100%;text-align:center;margin-top:12px;padding:11px;border-radius:11px;border:0;background:var(--accent);color:var(--ink);font-weight:800;font-size:13.5px;cursor:pointer;text-decoration:none}
+  .btn.dis{background:#2b201b;color:var(--faint);cursor:default}
+  #detail .x{position:absolute;right:12px;top:12px;background:none;border:0;color:var(--muted);cursor:pointer;font-size:16px}
+  .lbl{position:absolute;z-index:3;transform:translate(10px,-50%);font-size:12px;white-space:nowrap;pointer-events:none;
+    background:#000a;border:1px solid #ffffff2a;border-radius:6px;padding:2px 7px}
+  .lbl.ready{border-color:#ffd34f88}
+  .lbl.ready b{color:var(--gold)}
+  .lbl.off{color:#b9aaa0;font-size:11px}
+  #foot{position:absolute;right:16px;bottom:12px;font-size:11px;color:#8d7d72;z-index:4;text-align:right;max-width:60vw}
+  @media (max-width:760px){ #detail{top:auto;bottom:12px} #left{bottom:auto;max-height:45vh} }
+</style>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+</head>
+<body>
+<div class="panel" id="left">
+  <div class="head">
+    <div class="brand"><div class="logo"></div><b style="font-size:15px">Marswalk</b><span class="hint">EVA planner</span></div>
+    <h1>Choose a landing site</h1>
+    <div class="sub">Drag to spin Mars, scroll to zoom. Gold sites have a full 1 m terrain package; open one to plan an EVA.</div>
+  </div>
+  <div class="body">
+    <div class="card"><h2>Sites</h2><div id="list"></div></div>
+    <div class="card"><h2>Globe map</h2>
+      <div class="seg" id="skin"><button data-k="mola" class="on">Elevation</button><button data-k="albedo">Natural</button></div>
+      <div class="hint" style="margin-top:8px" id="skinSrc"></div>
+    </div>
+    <div class="card"><h2>Level of detail</h2>
+      <div class="lod">
+        <b>463 m</b><span>Globe: MOLA elevation + THEMIS IR (whole planet)</span>
+        <b>100 m</b><span>Site: THEMIS night IR (thermal inertia)</span>
+        <b>18 m</b><span>Site: CRISM minerals</span>
+        <b>1 m</b><span>Site: HiRISE terrain + image (2.56 km square)</span>
+      </div>
+      <div class="hint" style="margin-top:8px">Only the site you open is downloaded. A seamless planet would stream the same way: coarse globe first, finer tiles as you zoom in, nothing beyond the horizon.</div>
+    </div>
+    <div class="card"><h2>Mars right now</h2><div class="kv" id="now"></div></div>
+  </div>
+</div>
+<div class="panel" id="detail"><button class="x" id="dx">✕</button><div id="dBody"></div></div>
+<div id="labels"></div>
+<div id="foot">Day and night on the globe follow the real sub-solar point · MOLA/THEMIS and TES mosaics: NASA/JPL/GSFC/ASU via USGS Astrogeology</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+const $ = id => document.getElementById(id), D2R = Math.PI / 180;
+const SITES = await (await fetch('data/sites.json')).json();
+const ready = Object.entries(SITES).filter(([k, v]) => v.ready).map(([id, v]) => ({ id, ...v }));
+const others = SITES.others.map(o => ({ ...o, lon: o.lon > 180 ? o.lon - 360 : o.lon }));
+const all = [...ready, ...others];
+const photos = {};
+await Promise.all(ready.map(async s => { try { photos[s.id] = await (await fetch(`data/${s.id}/photos/photos.json`)).json(); } catch (e) { photos[s.id] = []; } }));
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.setSize(innerWidth, innerHeight); document.body.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+const cam = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, .01, 200);
+const controls = new OrbitControls(cam, renderer.domElement);
+controls.enableDamping = true; controls.minDistance = 1.35; controls.maxDistance = 6; controls.enablePan = false; controls.autoRotate = true; controls.autoRotateSpeed = .35; controls.rotateSpeed = .5;
+controls.addEventListener('start', () => { controls.autoRotate = false; fly = null; });
+scene.add(new THREE.AmbientLight(0xffffff, .5));
+const sunL = new THREE.DirectionalLight(0xfff1e0, 2.4); scene.add(sunL);
+
+const loader = new THREE.TextureLoader();
+const [mola, albedo] = await Promise.all(['data/globe_mola.jpg', 'data/globe_albedo.jpg'].map(u => loader.loadAsync(u)));
+const tex = { mola, albedo };
+Object.values(tex).forEach(t => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = renderer.capabilities.getMaxAnisotropy(); });
+const mars = new THREE.Mesh(new THREE.SphereGeometry(1, 128, 64), new THREE.MeshStandardMaterial({ map: tex.mola, roughness: 1, metalness: 0 }));
+scene.add(mars);
+scene.add(new THREE.Mesh(new THREE.SphereGeometry(1.025, 64, 32), new THREE.ShaderMaterial({   // thin dusty atmosphere rim
+  transparent: true, depthWrite: false, side: THREE.BackSide, blending: THREE.AdditiveBlending,
+  vertexShader: 'varying vec3 vN; varying vec3 vV; void main(){ vN = normalize(normalMatrix*normal); vec4 p = modelViewMatrix*vec4(position,1.); vV = normalize(-p.xyz); gl_Position = projectionMatrix*p; }',
+  fragmentShader: 'varying vec3 vN; varying vec3 vV; void main(){ float f = pow(1. - abs(dot(vN, vV)), 3.); gl_FragColor = vec4(vec3(1., .55, .35) * f * 1.4, f); }'
+})));
+{
+  const g = new THREE.BufferGeometry(), p = [];
+  for (let i = 0; i < 2500; i++) { const v = new THREE.Vector3().randomDirection().multiplyScalar(60 + Math.random() * 40); p.push(v.x, v.y, v.z); }
+  g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 1.2, sizeAttenuation: false })));
+}
+const SRC = { mola: 'MOLA elevation colours (blue = low, red/white = high) blended with THEMIS day IR, 463 m/px.', albedo: 'TES bolometric albedo (bright dust vs dark basalt), 7.4 km/px, tinted.' };
+function setSkin(k) { mars.material.map = tex[k]; mars.material.needsUpdate = true; document.querySelectorAll('#skin button').forEach(b => b.classList.toggle('on', b.dataset.k === k)); $('skinSrc').textContent = SRC[k]; }
+document.querySelectorAll('#skin button').forEach(b => b.onclick = () => setSkin(b.dataset.k)); setSkin('mola');
+
+// lat/lon (east) → sphere point, matching SphereGeometry UVs (u = (lon + 180) / 360)
+const vec = (lat, lon, r = 1) => new THREE.Vector3(Math.cos(lat * D2R) * Math.cos(lon * D2R) * r, Math.sin(lat * D2R) * r, -Math.cos(lat * D2R) * Math.sin(lon * D2R) * r);
+const canvasTex = draw => { const c = document.createElement('canvas'); c.width = c.height = 64; draw(c.getContext('2d')); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
+const dotOn = canvasTex(g => { const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, '#fff'); gr.addColorStop(.25, '#ffd34f'); gr.addColorStop(1, '#ffd34f00'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); });
+const dotOff = canvasTex(g => { g.fillStyle = '#d9cbc2'; g.beginPath(); g.arc(32, 32, 12, 0, Math.PI * 2); g.fill(); });
+all.forEach(s => {
+  s.pos = vec(s.lat, s.lon, 1.004);
+  s.sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: s.ready ? dotOn : dotOff, transparent: true }));
+  s.sprite.position.copy(s.pos); s.sprite.scale.setScalar(s.ready ? .09 : .035); s.sprite.userData.s = s; scene.add(s.sprite);
+  s.el = document.createElement('div'); s.el.className = 'lbl ' + (s.ready ? 'ready' : 'off');
+  s.el.innerHTML = s.ready ? `<b>●</b> ${s.name}` : s.name; $('labels').appendChild(s.el);
+});
+$('list').innerHTML = all.map((s, i) => `<div class="site ${s.ready ? '' : 'off'}" data-i="${i}"><i></i><div><div class="n">${s.name}</div><div class="m">${s.mission}</div></div><span class="go">${s.ready ? 'Open ▶' : 'not built'}</span></div>`).join('');
+document.querySelectorAll('#list .site').forEach(el => el.onclick = () => select(all[+el.dataset.i]));
+
+// Mars clock (Mars24 algorithm)
+function marsTime(lonE) {
+  const jdTT = Date.now() / 864e5 + 2440587.5 + 69.184 / 86400, dt = jdTT - 2451545;
+  const M = (19.3871 + .52402073 * dt) * D2R, aFMS = 270.3871 + .524038496 * dt;
+  const nuM = (10.691 + 3e-7 * dt) * Math.sin(M) + .623 * Math.sin(2 * M) + .05 * Math.sin(3 * M) + .005 * Math.sin(4 * M) + .0005 * Math.sin(5 * M);
+  const Ls = ((aFMS + nuM) % 360 + 360) % 360, eot = 2.861 * Math.sin(2 * Ls * D2R) - .071 * Math.sin(4 * Ls * D2R) + .002 * Math.sin(6 * Ls * D2R) - nuM;
+  const msd = (dt - 4.5) / 1.0274912517 + 44796 - .0009626, mst = (((msd % 1) + 1) % 1) * 24;
+  return { Ls, msd, ltst: (((mst + lonE / 15 + eot / 15) % 24) + 24) % 24,
+    subsolarLon: ((((12 - mst - eot / 15) * 15) % 360) + 540) % 360 - 180, dec: Math.asin(Math.sin(25.19 * D2R) * Math.sin(Ls * D2R)) / D2R };
+}
+const clk = h => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.floor((h % 1) * 60)).padStart(2, '0')}`;
+function updateNow() {
+  const t = marsTime(0), season = ['spring', 'summer', 'autumn', 'winter'][Math.floor(t.Ls / 90)];
+  $('now').innerHTML = `<span>Season</span><span>Northern ${season} · Ls ${t.Ls.toFixed(0)}°</span><span>Mars Sol Date</span><span>${Math.floor(t.msd)}</span>
+    ${ready.map(s => `<span>${s.name}</span><span>${clk(marsTime(s.lon).ltst)} local solar time</span>`).join('')}`;
+  sunL.position.copy(vec(t.dec, t.subsolarLon, 5));   // real day/night terminator
+}
+updateNow(); setInterval(updateNow, 10000);
+
+let fly = null;
+const clampD = d => Math.min(4, Math.max(3.1, d));
+function select(s) {
+  controls.autoRotate = false;
+  document.querySelectorAll('#list .site').forEach((el, i) => el.classList.toggle('sel', all[i] === s));
+  fly = { from: cam.position.clone(), to: s.pos.clone().normalize().multiplyScalar(clampD(cam.position.length())), t: 0 };
+  const t = marsTime(s.lon), ph = s.ready ? photos[s.id] : [];
+  const pick = ph.filter((_, i) => i % Math.max(1, Math.floor(ph.length / 3)) === 0).slice(0, 3);
+  $('dBody').innerHTML = `<h3>${s.name}</h3><div class="m">${s.mission} · ${Math.abs(s.lat).toFixed(2)}°${s.lat >= 0 ? 'N' : 'S'} ${((s.lon + 360) % 360).toFixed(2)}°E</div>
+    ${s.ready ? `<div>${s.blurb}</div>
+      ${pick.length ? `<div class="thumbs">${pick.map(p => `<img src="data/${s.id}/photos/${p.file}" alt="${s.rover} sol ${p.sol}" title="${s.rover} · sol ${p.sol} (NASA/JPL-Caltech)">`).join('')}</div>` : ''}
+      <div class="kv"><span>Terrain</span><span>HiRISE DTM 1 m · 2.56 × 2.56 km</span><span>Soft soil</span><span>THEMIS night IR + HiRISE albedo</span>
+      <span>Minerals</span><span>CRISM summary products</span><span>Rover photos</span><span>${ph.length} real ${s.rover} images</span>
+      <span>Local time now</span><span>${clk(t.ltst)} LTST</span></div>
+      <a class="btn" href="planner.html?site=${s.id}">Open site planner ▶</a>`
+    : `<div class="hint" style="font-size:12px">${s.dtms} on USGS Astrogeology, but this site has no terrain package yet. Add it to <code>scripts/process_site.py</code> and <code>data/sites.json</code> to make it playable.</div>
+      <div class="kv" style="margin-top:10px"><span>Local time now</span><span>${clk(t.ltst)} LTST</span></div><span class="btn dis">Terrain package not built</span>`}`;
+  $('detail').style.display = 'block';
+}
+$('dx').onclick = () => { $('detail').style.display = 'none'; document.querySelectorAll('#list .site').forEach(el => el.classList.remove('sel')); };
+const ray = new THREE.Raycaster(), m2 = new THREE.Vector2(); let down = null;
+const pickSite = e => { m2.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1); ray.setFromCamera(m2, cam); const h = ray.intersectObjects(all.filter(s => s.sprite.visible).map(s => s.sprite))[0]; return h && h.object.userData.s; };
+renderer.domElement.addEventListener('pointerdown', e => down = [e.clientX, e.clientY]);
+renderer.domElement.addEventListener('pointerup', e => { if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return; const s = pickSite(e); if (s) select(s); });
+renderer.domElement.addEventListener('dblclick', e => { const s = pickSite(e); if (s && s.ready) location.href = `planner.html?site=${s.id}`; });
+renderer.domElement.addEventListener('pointermove', e => { renderer.domElement.style.cursor = pickSite(e) ? 'pointer' : ''; });
+const v = new THREE.Vector3(), camDir = new THREE.Vector3();
+renderer.setAnimationLoop(() => {
+  if (fly) {
+    fly.t = Math.min(1, fly.t + .02); const e = fly.t < .5 ? 2 * fly.t * fly.t : 1 - (-2 * fly.t + 2) ** 2 / 2;
+    const r = fly.from.length() + (fly.to.length() - fly.from.length()) * e;
+    cam.position.copy(fly.from).normalize().lerp(fly.to.clone().normalize(), e).normalize().multiplyScalar(r); if (fly.t >= 1) fly = null;
+  }
+  controls.update();
+  camDir.copy(cam.position).normalize();
+  all.forEach(s => {
+    const facing = s.pos.clone().normalize().dot(camDir) > .3;
+    s.el.style.display = facing ? '' : 'none'; s.sprite.visible = facing;
+    if (facing) { v.copy(s.pos).project(cam); s.el.style.left = (v.x + 1) / 2 * innerWidth + 'px'; s.el.style.top = (1 - v.y) / 2 * innerHeight + 'px'; }
+  });
+  renderer.render(scene, cam);
+});
+function fit() {   // keep the globe centred in the space right of the side panel
+  renderer.setSize(innerWidth, innerHeight); cam.aspect = innerWidth / innerHeight;
+  if (innerWidth > 760) cam.setViewOffset(innerWidth, innerHeight, -190, 0, innerWidth, innerHeight); else cam.clearViewOffset();
+  cam.updateProjectionMatrix();
+}
+addEventListener('resize', fit); fit();
+cam.position.copy(vec(SITES.jezero.lat + 8, SITES.jezero.lon + 30, 3.6));   // start looking at Jezero
+</script>
+</body>
+</html>
