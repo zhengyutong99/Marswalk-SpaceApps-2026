@@ -311,7 +311,7 @@
       <div class="card">
         <div class="card-t"><h2>Elevation profile</h2><span class="r">hover to locate</span></div>
         <canvas id="profile" width="700" height="220"></canvas>
-        <div class="legend-row"><span>Color = slope</span><span>◆ stop</span><span><i style="background:#8a8a8a"></i>no line of sight</span><span><i style="background:#ff6b6b"></i>beyond walk-back</span></div>
+        <div class="legend-row"><span>Color = slope</span><span>◆ stop</span><span style="color:#ffb547">vertical ×N = heights drawn N× steeper</span><span><i style="background:#8a8a8a"></i>no line of sight</span><span><i style="background:#ff6b6b"></i>beyond walk-back</span></div>
         <div class="hint" style="margin-top:6px">Red = steep climbs that cost time, O₂ and battery.</div>
       </div>
     </section>
@@ -1037,8 +1037,14 @@ let profGeom = null;
 function drawProfile(r) {
   const cv = $('profile'), g = cv.getContext('2d'), w = cv.width, h = cv.height;
   g.clearRect(0, 0, w, h); profGeom = null; if (!r) return;
-  const hs = r.pts.map(p => p.h), lo = Math.min(...hs) - 3, hi = Math.max(...hs) + 3, top = 30, bot = h - 26;
-  const X = d => 14 + d / r.dist * (w - 28), Y = e => bot - (e - lo) / (hi - lo) * (bot - top);
+  const hs = r.pts.map(p => p.h), lo = Math.min(...hs) - 3, hi = Math.max(...hs) + 3, top = 30, bot = h - 26, L = 92, R = 14;
+  const X = d => L + d / r.dist * (w - L - R), Y = e => bot - (e - lo) / (hi - lo) * (bot - top);
+  // height ticks at round elevations (absolute, metres)
+  const step = [1, 2, 5, 10, 20, 25, 50, 100, 200, 500].find(s => s >= (hi - lo) / 3) || 1000;
+  g.strokeStyle = '#ffffff1f'; g.lineWidth = 1; g.fillStyle = '#a8968a'; g.font = '16px sans-serif'; g.textAlign = 'right';
+  for (let e = Math.ceil((lo + meta.hmin) / step) * step; e <= hi + meta.hmin; e += step) {
+    const y = Y(e - meta.hmin); g.beginPath(); g.moveTo(L, y); g.lineTo(w - R, y); g.stroke(); g.fillText(`${e} m`, L - 8, y + 5);
+  }
   for (let i = 1; i < r.pts.length; i++) {
     const a = r.pts[i - 1], b = r.pts[i], c = ramp(SLOPE_RAMP, b.slope / 30);
     g.fillStyle = `rgb(${c.map(v => v * 255 | 0)})`; g.fillRect(X(a.d), Y(b.h), Math.max(1, X(b.d) - X(a.d)), bot - Y(b.h));
@@ -1046,15 +1052,18 @@ function drawProfile(r) {
     if (r.m === 'rover' && b.margin < 0) { g.fillStyle = '#ff6b6b'; g.fillRect(X(a.d), 20, Math.max(1, X(b.d) - X(a.d)), 4); }
   }
   g.fillStyle = '#fff'; g.font = 'bold 18px sans-serif'; g.textAlign = 'center';
-  r.stopD.forEach((d, i) => g.fillText('◆', X(d), top + 2));
-  g.fillStyle = '#a8968a'; g.font = '17px sans-serif'; g.textAlign = 'left'; g.fillText('0', 12, h - 4);
-  g.textAlign = 'center'; g.fillText((r.dist / 1000).toFixed(1) + ' km', w / 2, h - 4);
-  g.textAlign = 'right'; g.fillText(`${(lo + meta.hmin).toFixed(0)} … ${(hi + meta.hmin).toFixed(0)} m`, w - 10, h - 4);
-  profGeom = { X, lo, hi, w, r };
+  r.stopD.forEach(d => g.fillText('◆', X(d), top + 2));
+  // vertical exaggeration as the profile is actually shown on screen (CSS stretches the canvas)
+  const dw = cv.clientWidth || 336, dh = cv.clientHeight || 112;
+  const ve = ((bot - top) / (hi - lo) * dh / h) / ((w - L - R) / r.dist * dw / w);
+  g.fillStyle = '#a8968a'; g.font = '17px sans-serif'; g.textAlign = 'left'; g.fillText('0', L, h - 4);
+  g.textAlign = 'center'; g.fillText((r.dist / 1000).toFixed(1) + ' km', (L + w - R) / 2, h - 4);
+  g.textAlign = 'right'; g.fillStyle = '#ffb547'; g.fillText(`vertical ×${ve >= 10 ? Math.round(ve) : ve.toFixed(1)}`, w - R, h - 4);
+  profGeom = { X, lo, hi, w, r, L, R };
 }
 $('profile').addEventListener('mousemove', e => {
   if (!profGeom) return; const b = e.target.getBoundingClientRect(), u = (e.clientX - b.left) / b.width * profGeom.w;
-  const d = clamp((u - 14) / (profGeom.w - 28), 0, 1) * profGeom.r.dist;
+  const d = clamp((u - profGeom.L) / (profGeom.w - profGeom.L - profGeom.R), 0, 1) * profGeom.r.dist;
   let best = profGeom.r.pts[0]; for (const p of profGeom.r.pts) if (Math.abs(p.d - d) < Math.abs(best.d - d)) best = p;
   profMarker.position.set(best.x, heightAt(best.x, best.z) + 8, best.z); profMarker.visible = true;
   const tip = $('profTip'); tip.style.display = 'block'; tip.style.left = e.clientX + 'px'; tip.style.top = e.clientY + 'px';
@@ -1098,6 +1107,7 @@ function setTab(t) {
   document.querySelector('.p-body').scrollTop = 0;
   try { localStorage.setItem('mw-tab', t); } catch (e) { }
   if (t === 'env') drawEnvChart();
+  if (t === 'plan' && typeof route !== 'undefined') drawProfile(hasRoute() ? route : null);
 }
 document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
 try { const t = localStorage.getItem('mw-tab'); if (t) setTab(t); } catch (e) { }
@@ -1801,7 +1811,7 @@ renderer.setAnimationLoop(() => {
 });
 renderer.domElement.addEventListener('webglcontextlost', e => { e.preventDefault(); $('glLost').style.display = 'flex'; });
 renderer.domElement.addEventListener('webglcontextrestored', () => { $('glLost').style.display = 'none'; });
-addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); [planCam, fpCam].forEach(c => { c.aspect = innerWidth / innerHeight; c.updateProjectionMatrix(); }); });
+addEventListener('resize', () => { if (hasRoute()) drawProfile(route); renderer.setSize(innerWidth, innerHeight); [planCam, fpCam].forEach(c => { c.aspect = innerWidth / innerHeight; c.updateProjectionMatrix(); }); });
 
 /* =========================================================
    12. Pause menu, controls, field manual, cuff checklist, science cards, minimap filters, share link
