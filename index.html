@@ -63,7 +63,7 @@
   <div class="head">
     <div class="brand"><div class="logo"></div><b style="font-size:15px">Marswalk</b><span class="hint">EVA planner</span></div>
     <h1>Choose a landing site</h1>
-    <div class="sub">Drag to spin Mars, scroll to zoom. Gold sites have a full 1 m terrain package; open one to plan an EVA.</div>
+    <div class="sub">Spin and zoom Mars. Gold sites are playable.</div>
   </div>
   <div class="body">
     <div class="card"><h2>Sites</h2><div id="list"></div></div>
@@ -78,7 +78,7 @@
         <b>18 m</b><span>Site: CRISM minerals</span>
         <b>1 m</b><span>Site: HiRISE terrain + image (2.56 km square)</span>
       </div>
-      <div class="hint" style="margin-top:8px">Only the site you open is downloaded. A seamless planet would stream the same way: coarse globe first, finer tiles as you zoom in, nothing beyond the horizon.</div>
+      <div class="hint" style="margin-top:8px">Only the site you open is downloaded.</div>
     </div>
     <div class="card"><h2>Mars right now</h2><div class="kv" id="now"></div></div>
   </div>
@@ -178,7 +178,7 @@ function select(s) {
       <span>Minerals</span><span>CRISM summary products</span><span>Rover photos</span><span>${ph.length} real ${s.rover} images</span>
       <span>Local time now</span><span>${clk(t.ltst)} LTST</span></div>
       <a class="btn" href="planner.html?site=${s.id}">Open site planner ▶</a>`
-    : `<div class="hint" style="font-size:12px">${s.dtms} on USGS Astrogeology, but this site has no terrain package yet. Add it to <code>scripts/process_site.py</code> and <code>data/sites.json</code> to make it playable.</div>
+    : `<div class="hint" style="font-size:12px">${s.dtms}. No terrain package yet.</div>
       <div class="kv" style="margin-top:10px"><span>Local time now</span><span>${clk(t.ltst)} LTST</span></div><span class="btn dis">Terrain package not built</span>`}`;
   $('detail').style.display = 'block';
 }
