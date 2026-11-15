@@ -68,7 +68,7 @@
   <div class="body">
     <div class="card"><h2>Sites</h2><div id="list"></div></div>
     <div class="card"><h2>Globe map</h2>
-      <div class="seg" id="skin"><button data-k="mola" class="on">Elevation</button><button data-k="albedo">Natural</button></div>
+      <div class="seg" id="skin"><button data-k="albedo" class="on">Natural</button><button data-k="mola">Elevation</button></div>
       <div class="hint" style="margin-top:8px" id="skinSrc"></div>
     </div>
     <div class="card"><h2>Level of detail</h2>
@@ -127,7 +127,7 @@ scene.add(new THREE.Mesh(new THREE.SphereGeometry(1.025, 64, 32), new THREE.Shad
 }
 const SRC = { mola: 'MOLA elevation colours (blue = low, red/white = high) blended with THEMIS day IR, 463 m/px.', albedo: 'TES bolometric albedo (bright dust vs dark basalt), 7.4 km/px, tinted.' };
 function setSkin(k) { mars.material.map = tex[k]; mars.material.needsUpdate = true; document.querySelectorAll('#skin button').forEach(b => b.classList.toggle('on', b.dataset.k === k)); $('skinSrc').textContent = SRC[k]; }
-document.querySelectorAll('#skin button').forEach(b => b.onclick = () => setSkin(b.dataset.k)); setSkin('mola');
+document.querySelectorAll('#skin button').forEach(b => b.onclick = () => setSkin(b.dataset.k)); setSkin('albedo');
 
 // lat/lon (east) → sphere point, matching SphereGeometry UVs (u = (lon + 180) / 360)
 const vec = (lat, lon, r = 1) => new THREE.Vector3(Math.cos(lat * D2R) * Math.cos(lon * D2R) * r, Math.sin(lat * D2R) * r, -Math.cos(lat * D2R) * Math.sin(lon * D2R) * r);

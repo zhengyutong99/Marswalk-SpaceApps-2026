@@ -291,7 +291,7 @@
         <div style="margin-top:10px"><div class="lbl">Payload carried <button class="qm" data-man="payload">?</button></div><div class="seg" id="payload"></div></div>
       </div>
       <div class="card">
-        <div class="card-t"><h2>Science stops</h2><span class="r">click map to add</span></div>
+        <div class="card-t"><h2>Science stops</h2><span class="r">click map: add · right-click stop: remove</span></div>
         <div id="targets"></div>
       </div>
       <div class="card">
@@ -754,6 +754,7 @@ const ROCK_CELL = 8, rockHash = new Map(), CH = 8, CHW = W / CH, rockChunks = []
     const n = Math.floor(ROCK[k] * 3 + (rnd() < .2 ? 1 : 0));
     for (let r = 0; r < n; r++) {
       const x = kX(k) + (rnd() - .5) * C, z = kZ(k) + (rnd() - .5) * C, sc = (.3 + rnd() * rnd() * 2.5) * (.6 + ROCK[k]);
+      if (Math.hypot(x - BASE.x, z - BASE.z) < 40 || Math.hypot(x - BASE.x - 38, z - BASE.z - 26) < 14) continue;   // cleared ground around the base
       const ci = clamp(Math.floor((x + W / 2) / CHW), 0, CH - 1) * CH + clamp(Math.floor((z + W / 2) / CHW), 0, CH - 1);
       lists[ci].push([x, z, sc]); total++;
     }
@@ -785,11 +786,44 @@ const beaconMat = new THREE.MeshBasicMaterial({ color: 0xffd34f, transparent: tr
 const beaconOff = new THREE.MeshBasicMaterial({ color: 0x888888, transparent: true, opacity: .25 });
 const beacons = new THREE.Group(); world.add(beacons);
 {
-  const hab = new THREE.Group();
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(14, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0xf2f2f2 }));
-  const ring = new THREE.Mesh(new THREE.CylinderGeometry(16, 16, 3, 24), new THREE.MeshLambertMaterial({ color: 0x8899aa }));
-  const mast = new THREE.Mesh(new THREE.CylinderGeometry(.25, .25, 6, 6), new THREE.MeshLambertMaterial({ color: 0xcccccc })); mast.position.set(18, 3, 0);
-  hab.add(dome, ring, mast); hab.traverse(o => o.castShadow = o.receiveShadow = true);
+  // habitat: central hub + 3 pressurised modules, solar arrays, 6 m comms mast, and the crew's landed rocket.
+  // Every piece is also a collider, so you can't walk or drive through the base.
+  const L = c => new THREE.MeshLambertMaterial({ color: c });
+  const white = L(0xeef0f2), grey = L(0x8a96a3), dark = L(0x3a4048), steel = L(0xc9ced4), panelM = L(0x1d2f5a), orange = L(0xd9622b);
+  const hab = new THREE.Group(), add = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); hab.add(m); return m; };
+  const addCollider = (x, z, r) => { const wx = BASE.x + x, wz = BASE.z + z, key = Math.floor(wx / ROCK_CELL) + ',' + Math.floor(wz / ROCK_CELL); if (!rockHash.has(key)) rockHash.set(key, []); rockHash.get(key).push({ x: wx, z: wz, r, h: 99 }); };
+  add(new THREE.CylinderGeometry(30, 32, 1.2, 40), L(0x9a7a62), 0, 0, 0);                                   // graded regolith pad
+  add(new THREE.CylinderGeometry(8, 8, 6, 28), white, 0, 3.6, 0); add(new THREE.SphereGeometry(8, 28, 12, 0, Math.PI * 2, 0, Math.PI / 2), white, 0, 6.6, 0);
+  add(new THREE.CylinderGeometry(8.3, 8.3, .8, 28), orange, 0, 4.2, 0); addCollider(0, 0, 8.5);
+  [0, 2.094, 4.189].forEach(a => {                                                                            // three modules
+    const cx = Math.cos(a), cz = Math.sin(a);
+    add(new THREE.CylinderGeometry(3.4, 3.4, 13, 20), white, cx * 14, 3.4, cz * 14, 0, -a, Math.PI / 2);
+    add(new THREE.SphereGeometry(3.4, 16, 10), white, cx * 20.5, 3.4, cz * 20.5);
+    add(new THREE.CylinderGeometry(3.6, 3.6, .6, 20), grey, cx * 9.5, 3.4, cz * 9.5, 0, -a, Math.PI / 2);
+    [11, 15.5, 20].forEach(d => addCollider(cx * d, cz * d, 3.8));
+  });
+  [-1, 1].forEach(side => {                                                                                   // solar arrays
+    for (let i = 0; i < 3; i++) {
+      const x = -24 + i * 7, z = side * 17;
+      add(new THREE.BoxGeometry(6, .15, 3.5), panelM, x, 2.4, z, -.5 * side, 0, 0); add(new THREE.CylinderGeometry(.12, .12, 2.3, 6), grey, x, 1.15, z);
+      addCollider(x, z, 2.6);
+    }
+  });
+  add(new THREE.CylinderGeometry(.25, .25, 6, 6), steel, 9, 9.6, 0); add(new THREE.SphereGeometry(.7, 10, 8), white, 9, 12.8, 0);   // 6 m comms mast on the hub
+  // landed rocket (crew ascent vehicle), 40 m south-east of the hub
+  const rx = 38, rz = 26, rg = heightAt(BASE.x + rx, BASE.z + rz) - heightAt(BASE.x, BASE.z);
+  add(new THREE.CylinderGeometry(4.5, 4.5, 34, 28), steel, rx, rg + 19, rz);
+  add(new THREE.ConeGeometry(4.5, 11, 28), steel, rx, rg + 41.5, rz);
+  add(new THREE.CylinderGeometry(4.6, 4.6, 1.2, 28), dark, rx, rg + 30, rz);
+  add(new THREE.CylinderGeometry(3.2, 4.2, 2.4, 20), dark, rx, rg + 1.2, rz);
+  for (let i = 0; i < 4; i++) {                                                                              // legs and fins
+    const a = i * Math.PI / 2 + Math.PI / 4, lx = rx + Math.cos(a) * 6.5, lz = rz + Math.sin(a) * 6.5;
+    add(new THREE.CylinderGeometry(.35, .35, 8, 6), grey, rx + Math.cos(a) * 5.2, rg + 4, rz + Math.sin(a) * 5.2, Math.sin(a) * .35, 0, -Math.cos(a) * .35);
+    add(new THREE.CylinderGeometry(1, 1, .4, 10), dark, lx, rg + .2, lz);
+    add(new THREE.BoxGeometry(.3, 6, 3), steel, rx + Math.cos(a) * 5, rg + 8, rz + Math.sin(a) * 5, 0, -a, 0);
+  }
+  addCollider(rx, rz, 7.2);
+  hab.traverse(o => o.castShadow = o.receiveShadow = true);
   hab.position.set(BASE.x, heightAt(BASE.x, BASE.z), BASE.z); world.add(hab);
 }
 // photo pins: real Perseverance / Curiosity raw images taken at these traverse stops (NASA MMGIS waypoints + raw image API)
@@ -1146,7 +1180,7 @@ $('envSrc').innerHTML = `Sun: computed (Mars24). Weather: <b style="color:var(--
 const ray = new THREE.Raycaster(), mouse = new THREE.Vector2(); let downAt = null;
 renderer.domElement.addEventListener('pointerdown', e => downAt = [e.clientX, e.clientY]);
 renderer.domElement.addEventListener('pointerup', e => {
-  if (mode !== 'plan' || !downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
+  if (e.button !== 0 || mode !== 'plan' || !downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
   mouse.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1); ray.setFromCamera(mouse, planCam);
   if (photoPins.visible) { const ph = ray.intersectObjects(photoPins.children)[0]; if (ph) { openPhoto(ph.object.userData.photo); return; } }
   const hit = ray.intersectObject(terrain)[0]; if (!hit) return;
@@ -1155,6 +1189,28 @@ renderer.domElement.addEventListener('pointerup', e => {
     why: `Slope ${SLOPE[k].toFixed(0)}° · ${MIN_INFO[CRISM[k]][0]} · ${SAND[k] > .5 ? 'soft soil' : 'firm'} · shelter ${(SHELTER[k] * 100).toFixed(0)}% · ${COMMS[k] ? 'comms ✓' : 'no comms'}` });
   renderTargets(); refreshBeacons(); recompute();
 });
+
+// right-click a stop on the map: toggle it (custom stops are removed). A right-drag still pans the map.
+let rDown = null;
+renderer.domElement.addEventListener('pointerdown', e => { if (e.button === 2) rDown = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
+renderer.domElement.addEventListener('pointerup', e => {
+  if (e.button !== 2 || mode !== 'plan' || !rDown) return;
+  const moved = Math.hypot(e.clientX - rDown[0], e.clientY - rDown[1]); rDown = null; if (moved > 5) return;
+  const t = stopAtScreen(e.clientX, e.clientY); if (!t) return;
+  if (t.custom) { targets.splice(targets.indexOf(t), 1); ptoast(`✕ Removed ${t.id}`); }
+  else { t.on = !t.on; ptoast(`${t.on ? '✓ Added' : '✕ Removed'} ${t.id} ${t.name}`); }
+  renderTargets(); refreshBeacons(); recompute();
+});
+const sv = new THREE.Vector3();
+function stopAtScreen(cx, cy) {   // the stop whose beacon (ground → top) is closest to the cursor, within 28 px
+  let best = null, bd = 28;
+  targets.forEach(t => { for (const up of [0, 20, 40, 60, 75]) {
+    sv.set(t.x, (heightAt(t.x, t.z) + up) * VEX, t.z).project(planCam); if (sv.z > 1) continue;
+    const d = Math.hypot((sv.x + 1) / 2 * innerWidth - cx, (1 - sv.y) / 2 * innerHeight - cy); if (d < bd) { bd = d; best = t; }
+  } });
+  return best;
+}
 
 /* =========================================================
    9. First-person rehearsal / street view (helmet HUD)
@@ -1295,7 +1351,7 @@ function enterFP(opts = {}) {
     toast('🧍 Street view (preview)', `Real Mars time: ${fmtClock(now)}${night ? ' (night, ⏩ to skip)' : ''} · nothing is used up`);
   } else {
     setFpMob(mob);
-    const i0 = Math.max(0, route.pts.findIndex(p => Math.hypot(p.x - BASE.x, p.z - BASE.z) > 25));
+    const i0 = Math.max(0, route.pts.findIndex(p => Math.hypot(p.x - BASE.x, p.z - BASE.z) > 55));
     const p0 = route.pts[i0], p1 = route.pts[Math.min(i0 + 8, route.pts.length - 1)];
     Object.assign(rover, base, { x: p0.x, z: p0.z, street: false, prog: i0, tod: evaStart, hd: Math.atan2(p1.x - p0.x, -(p1.z - p0.z)), plan: route });
     logEv(`EVA start · ${MOBILITY[mob].long} · ${fmtClock(evaStart)} LTST`);
@@ -1493,7 +1549,7 @@ function stepFP(dtReal) {
   r.preview = !isShelter && nextT !== BASE && dNext < 180 ? photoNear(nextT, 400) : -1;
   if (isShelter) { }
   else if (!R) { if (dNext < 22 && nextT !== BASE && !r.visited.has(nextT.id)) { r.visited.add(nextT.id); showScience(nextT, false); } }
-  else if (!r.done && dNext < 22) {
+  else if (!r.done && dNext < (nextT === BASE ? 36 : 22)) {
     if (r.next < R.stops.length) {
       showScience(nextT, true); r.reached[nextT.id] = r.tod;
       r.met += STOP_MIN / 60; r.o2 += STOP_MIN / 60; r.dose += STOP_MIN / 60 * DOSE_RATE(SHELTER[k], spe || r.speOn); r.next++; logEv(`Reached ${nextT.id} ${nextT.name}: samples collected`);
@@ -1522,7 +1578,7 @@ function stepFP(dtReal) {
   else if (Math.abs(slopeAhead) > 15) w.push(['w', `⚠ Slope ${slopeAhead.toFixed(0)}°: caution`]);
   if (sand > .5) w.push(['w', fpMob === 'walk' ? '⚠ Soft sand: tiring, more O₂' : '⚠ Soft sand: risk of bogging down']);
   if (ROCK[k] > .6) w.push(['w', '⚠ Dense boulder field']);
-  if (r.bump > 0) w.push(['x', '💥 Hit a rock']);
+  if (r.bump > 0) w.push(['x', '💥 Collision']);
   if (night) w.push(['w', `🌙 Night ${airTemp(r.tod).toFixed(0)} °C · lamp on`]);
   if (!r.street) {
     if (R && bd > 40 && !r.done) w.push(['w', `↺ Off planned route by ${bd.toFixed(0)} m`]);
