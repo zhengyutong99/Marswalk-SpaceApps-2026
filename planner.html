@@ -1555,6 +1555,11 @@ function stepFP(dtReal) {
       r.met += STOP_MIN / 60; r.o2 += STOP_MIN / 60; r.dose += STOP_MIN / 60 * DOSE_RATE(SHELTER[k], spe || r.speOn); r.next++; logEv(`Reached ${nextT.id} ${nextT.name}: samples collected`);
     } else if (r.odo > 100) { r.done = true; r.auto = false; logEv('Back at the habitat'); return endEVA('complete', 'Safely back at the habitat'); }
   }
+  // back home with stops still open (skipped, or passed during a storm): end the EVA, counting them as missed
+  if (R && !r.done && r.odo > 100 && r.next < R.stops.length && Math.hypot(BASE.x - r.x, BASE.z - r.z) < 36 && r.prog >= R.pts.length - 30) {
+    const missed = R.stops.length - r.next; r.done = true; r.auto = false; logEv(`Back at the habitat · ${missed} stop(s) missed`);
+    return endEVA('complete', `Back at the habitat, ${missed} stop${missed > 1 ? 's' : ''} missed`);
+  }
   // HUD
   const o2 = clamp(100 * (1 - r.o2 / EVA_LIMIT), 0, 100), bat = clamp(100 * (1 - r.bat[fpMob]), 0, 100), [lon, lat] = lonLat(r.x, r.z);
   $('hO2').textContent = r.street ? '—' : o2.toFixed(0) + '%'; $('bO2').style.width = (r.street ? 100 : o2) + '%';
