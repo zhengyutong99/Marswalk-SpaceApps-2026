@@ -138,8 +138,8 @@
    }
   ],
   "base": [
-   -450,
-   -240
+   -80,
+   560
   ],
   "goal": "Measure active dune sand and old lake mudstone at the foot of Mount Sharp."
  },
@@ -155,8 +155,8 @@
   "goal": "Trace the carbonate and clay layers of the delta that Perseverance sampled in 2022.",
   "baseName": "Habitat (delta floor)",
   "base": [
-   460,
-   640
+   320,
+   120
   ],
   "climate": {
    "src": "MEDA (Perseverance) climatology",
@@ -227,10 +227,10 @@
   "solEpoch": 49269,
   "blurb": "High on Mount Sharp: a web of boxwork ridges that Curiosity explored in 2025.",
   "goal": "Study the boxwork ridges: mineral veins left by groundwater as Gale dried out.",
-  "baseName": "Habitat (lower bench)",
+  "baseName": "Habitat (flat bench)",
   "base": [
-   -540,
-   -770
+   400,
+   -120
   ],
   "climate": {
    "src": "REMS (Curiosity) climatology",
@@ -303,8 +303,8 @@
   "goal": "Scout one of the most clay-rich terrains on Mars as a future human landing site.",
   "baseName": "Habitat (landing zone)",
   "base": [
-   0,
-   200
+   360,
+   -200
   ],
   "climate": {
    "src": "Jezero-like latitude (no surface station here)",
