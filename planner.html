@@ -444,7 +444,7 @@
     <kbd>W A S D</kbd><span>Move forward / left / back / right · <kbd>←</kbd><kbd>→</kbd> turn · <kbd>Shift</kbd> faster</span>
     <kbd>V</kbd><span>Ride the rover / walk</span>
     <kbd>P</kbd><span>Autopilot along the planned route (rehearsal)</span>
-    <kbd>T</kbd><span>Street view: pause the sun · Rehearsal: speed ×1 / ×5 / ×20</span>
+    <kbd>T</kbd><span>Street view: pause the sun · Rehearsal: speed ×1 / ×5 / ×20 / ×100</span>
     <kbd>[</kbd> <kbd>]</kbd><span>Time −1 h / +1 h (also the ⏪ ⏩ buttons)</span>
     <kbd>1</kbd>–<kbd>4</kbd><span>Minimap filter: image · hazards · comms · walk-back</span>
     <kbd>M</kbd><span>Full site map (click it to move there)</span>
@@ -1289,7 +1289,7 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => keys[e.code] = false);
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 function togglePlay() { streetPlay = !streetPlay; $('tPlay').textContent = streetPlay ? '⏸' : '▶'; }
-function cycleWarp() { warp = warp === 1 ? 5 : warp === 5 ? 20 : 1; $('tPlay').textContent = '×' + warp; }
+function cycleWarp() { warp = warp === 1 ? 5 : warp === 5 ? 20 : warp === 20 ? 100 : 1; $('tPlay').textContent = '×' + warp; }
 // street view: jump the clock · rehearsal: same route, but as if the EVA had started an hour earlier / later
 function shiftTime(h) {
   if (rover.street) { rover.tod += h; return; }
@@ -1390,7 +1390,7 @@ function enterFP(opts = {}) {
   ['mO2', 'mBat'].forEach(id => $(id).style.opacity = rover.street ? .35 : 1);
   $('endBtn').style.display = rover.street ? 'none' : ''; $('tPlay').textContent = rover.street ? '⏸' : '×1';
   $('tBack').title = rover.street ? '−1 h ( [ )' : 'Start the EVA 1 h earlier ( [ )'; $('tFwd').title = rover.street ? '+1 h ( ] )' : 'Start the EVA 1 h later ( ] )';
-  $('tPlay').title = rover.street ? 'Pause / play the sun (T)' : 'Time speed ×1 / ×5 / ×20 (T)';
+  $('tPlay').title = rover.street ? 'Pause / play the sun (T)' : 'Time speed ×1 / ×5 / ×20 / ×100 (T)';
   rover.drillAt = !rover.street && $('togDrill').checked ? route.time * .35 : Infinity;
   setFilter('image');
 }
@@ -1476,10 +1476,10 @@ function collide(r, M) {
   return hit;
 }
 const trapRnd = mulberry(7);
-function stepFP(dtReal) {
+function stepFP(dtReal, sub = warp) {
   const r = rover;
   if (r.ended) return;
-  const dt = dtReal * (r.street ? 1 : warp), M = MOBILITY[fpMob], R = !r.street && hasRoute() ? r.plan : null;
+  const dt = dtReal * (r.street ? 1 : sub), M = MOBILITY[fpMob], R = !r.street && hasRoute() ? r.plan : null;
   const fx = Math.sin(r.hd), fz = -Math.cos(r.hd), k = nearestK(r.x, r.z), sand = SAND[k];
   const h0 = heightAt(r.x, r.z), slopeAhead = Math.atan2(heightAt(r.x + fx * 6, r.z + fz * 6) - h0, 6) / D2R;
   // time of day: street view runs a compressed sol; rehearsal follows the mission clock
@@ -1792,7 +1792,10 @@ function panPlan(dt) {
 let last = performance.now(), nowTimer = 0;
 renderer.setAnimationLoop(() => {
   const now = performance.now(), dt = Math.min(.05, (now - last) / 1000); last = now;
-  if (mode === 'plan') { panPlan(dt); controls.update(); updateLabels(); } else if (!paused) stepFP(dt);
+  if (mode === 'plan') { panPlan(dt); controls.update(); updateLabels(); } else if (!paused) {
+    // above ×20, run several ×20 sub-steps so fast-forward never skips through rocks or the route
+    if (warp > 20 && !rover.street) { for (let i = 0; i < warp / 20 && !rover.ended; i++) stepFP(dt, 20); } else stepFP(dt);
+  }
   if ((nowTimer -= dt) <= 0) { nowTimer = 1; updateNow(); }
   renderer.render(scene, cam);
 });
@@ -1952,7 +1955,7 @@ $('manBtn').onclick = () => openManual(); bindQm(document);
 
 applyLayer(); renderTargets(); refreshBeacons(); setSegs(); setStart(evaStart, false); updateNow();
 if (qs.has('debug')) window.__mw = { rover, setFilter, openMenu, openManual, copyShare, shareURL, fieldNote, toggleCuff, isPaused: () => paused, setLayer: k => { curLayer = k; applyLayer(); }, LAYERS, enterFP, exitFP, endEVA, route: () => route, SLOPE, SAND, THM, CRISM, COMMS, WALKBACK, nearestK, kX, kZ, V, marsNow, sunAt, airTemp, WIN,
-  step: (dt, draw = false) => { stepFP(dt); if (draw) renderer.render(scene, cam); }, setStart, keys, setWarp: w => warp = w };
+  step: (dt, draw = false) => { if (warp > 20) { for (let i = 0; i < warp / 20 && !rover.ended; i++) stepFP(dt, 20); } else stepFP(dt); if (draw) renderer.render(scene, cam); }, setStart, keys, setWarp: w => warp = w };
 </script>
 </body>
 </html>
