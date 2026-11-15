@@ -35,7 +35,13 @@ python3 -m http.server 8791
 
 ## Controls (first person)
 
-Drag to look · click the ground to move there · W/S/A/D to move · ←/→ to turn · Shift to go faster · V to switch rover/walk · P for autopilot · F to open a nearby photo · T for time (pause in street view, warp in rehearsal) · M for the site map · I for render stats · Esc to go back.
+Drag to look · click the ground to move there · W/S/A/D to move · ←/→ to turn · Shift to go faster · V to switch rover/walk · P for autopilot · T for time (pause in street view, warp in rehearsal) · 1–4 for minimap filters (image, hazards, comms, walk-back) · C for the cuff checklist · N for a field note · F to open a nearby rover photo · M for the site map · H for controls · Esc for the pause menu.
+
+The 📖 Manual button in the planner lists every rule and limit the simulation uses (O₂, batteries, slope limits, sand-trap odds, night, comms, walk-back, radiation, scoring).
+
+## Share a plan
+
+The 🔗 button copies a link that encodes the site, stops (including custom ones), mobility, route priority, payload and start time, e.g. `planner.html?site=gale&mob=walk&prof=safe&pay=kit&t=9.5&stops=G1.G2`.
 
 ## Project layout
 
