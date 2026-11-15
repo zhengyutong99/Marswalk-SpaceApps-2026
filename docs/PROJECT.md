@@ -15,7 +15,7 @@ The challenge asks for *"a map, tool, or interface a Mars astronaut could use du
 
 **Marswalk** is a planning tablet plus a helmet HUD for an astronaut and their rover partner:
 
-1. **Choose a site** on a 3D Mars globe. Two sites are fully built: Jezero (Perseverance) and Gale (Curiosity).
+1. **Choose a site** on a 3D Mars globe. Five sites are built, each with a stated science goal: Jezero and the Jezero delta front (Perseverance), Gale and the Gale boxwork (Curiosity), and Mawrth Vallis (never visited, a candidate landing site).
 2. **Plan** an EVA on real 1 m terrain. Pick science stops, rover or walking, payload and start time. A route planner draws the safest or fastest path and returns a **GO / CAUTION / NO-GO** verdict, with a reason for each risk.
 3. **Rehearse** the route in first person through the helmet HUD. Day and night, hazards and resource limits all apply, and real rover photos show what each stop looks like. Each rehearsal ends with a scored debrief.
 4. **Share** the plan as a link, or print an EVA cuff card.
@@ -24,16 +24,18 @@ The challenge asks for *"a map, tool, or interface a Mars astronaut could use du
 
 | Challenge text | What Marswalk does |
 |---|---|
+| "start by identifying some scientific goals for your mission and the location" | Every site states its science goal; the Gale boxwork site follows the brief's own example (boxwork that Curiosity studied in 2025) |
 | "a layered, integrated view of a location or route" | 8 data layers draped on 3D terrain, grouped as Hazards, Safety, and Science; the same data appears as minimap filters in first person |
 | "pulls together data from multiple NASA science missions" | MRO HiRISE (terrain, image), MRO CRISM (minerals), Mars Odyssey THEMIS (thermal inertia), MGS MOLA and TES (globe), MSL and Mars 2020 rover images and traverses, MSL RAD (dose baseline), MEDA/REMS (climate ranges) |
 | "at least three kinds of data: optical, thermal, spectral, topographic… radiation…" | optical (HiRISE), thermal (THEMIS night IR), spectral (CRISM), topographic (HiRISE DTM), radiation (RAD baseline + terrain shielding), atmospheric (sun, temperature, dust model) |
 | "hyperlocalized areas astronauts will target" | 2.56 × 2.56 km sites at 1 m source resolution (10 m planning grid) |
 | "NASA's first priority is always astronaut safety" | GO/NO-GO verdict, O₂ margin, battery budget, chance of getting stuck in sand, comms line of sight, walk-back limit, night penalties |
-| "you might include space weather data" | Solar-particle-event mode: routes prefer terrain shelter; a "shelter drill" injects an alert mid-EVA and points to the nearest shelter |
+| "you might include space weather data" | Live solar energetic particle events from NASA DONKI; solar-particle-event mode routes through terrain shelter; a "shelter drill" injects an alert mid-EVA and points to the nearest shelter |
 | "spacesuits… carrying scientific equipment… impact their mobility" | Payload choice (light / sampling kit / core drill) changes walking speed, O₂ use and battery |
 | "a route map… avoiding significant obstacles such as large rock formations" | A* route planner on slope, 1 m roughness and soft soil; rocks are physical colliders in first person; compass shows hazards ahead |
 | "a display inside the habitat… a tablet… a HUD on the helmet visor" | Planner = tablet, first person = helmet HUD, globe = habitat display |
 | "a tool or system that generates maps of different locations" | `scripts/process_site.py` builds a new site from any HiRISE DTM in the USGS catalogue; the globe shows 7 more candidate sites |
+| "updates on current conditions" | Latest real Curiosity REMS weather report and DONKI space weather in the Environment panel |
 | "predicted data and conditions for a future time frame" | Real Mars time at each site right now (Mars24), sunrise/sunset, a forecast for the sol, and the recommended EVA window |
 | "imagery taken by NASA's Mars surface missions… point-of-view images" | 43 real Perseverance / Curiosity raw images pinned where the rover took them; a preview opens as you approach each stop |
 | "rovers or other robotic systems to help transport the crew and their tools" | Astronaut + rover partner: ride or walk, the Apollo-style walk-back rule if the rover fails, rover battery and sand traps |
@@ -50,7 +52,10 @@ All data is public. It is processed by the scripts in `scripts/` and streamed fr
 | Surface images | `ESP_045994_1985_RED`, `ESP_018854_1755_RED` orthos | MRO HiRISE | same |
 | Thermal inertia (qualitative) | THEMIS IR night mosaics `mc13_syrtis_major_nir`, `mc23_aeolis_nir` (100 m) | Mars Odyssey THEMIS | USGS STAC `mo_themis_controlled_mosaics` |
 | Minerals | CRISM MTRDR browse products `FRT000047A3`, `FRT00005C5E` (Jezero); `FRT0000B6F1`, `FRT0000C0EF` (Gale) | MRO CRISM | PDS Geosciences Node via the ODE REST API |
-| Rover photos | Raw images at traverse stops (16 Perseverance, 27 Curiosity) | Mars 2020, MSL | mars.nasa.gov raw image APIs + MMGIS waypoint JSON |
+| Terrain (Jezero delta front, Gale boxwork, Mawrth Vallis) | `DTEEC_002387_1985_003798_1985_A01`, `DTEEC_019698_1750_019988_1750_U01`, `DTEEC_008469_2040_008825_2040_U01` | MRO HiRISE | USGS STAC |
+| Rover photos | Raw images at traverse stops (35 Perseverance, 45 Curiosity) | Mars 2020, MSL | mars.nasa.gov raw image APIs + MMGIS waypoint JSON |
+| Current weather | Latest Curiosity REMS report | MSL REMS | mars.nasa.gov weather feed (live) |
+| Space weather | Solar energetic particle events, last 60 days | NASA DONKI (CCMC) | api.nasa.gov (live) |
 | Globe | `Mars_MGS_MolaThemis50BlendPalette`, `Mars_MGS_TES_Albedo` | MGS MOLA, Odyssey THEMIS, MGS TES | USGS Astrogeology mosaics |
 | Radiation baseline | ~0.67 mSv/sol surface average | MSL RAD | published results |
 | Climate ranges | air / ground temperature, pressure, dust | Mars 2020 MEDA, MSL REMS | published climatology |
