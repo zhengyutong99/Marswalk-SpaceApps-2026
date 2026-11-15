@@ -172,10 +172,10 @@ function select(s) {
   const t = marsTime(s.lon), ph = s.ready ? photos[s.id] : [];
   const pick = ph.filter((_, i) => i % Math.max(1, Math.floor(ph.length / 3)) === 0).slice(0, 3);
   $('dBody').innerHTML = `<h3>${s.name}</h3><div class="m">${s.mission} · ${Math.abs(s.lat).toFixed(2)}°${s.lat >= 0 ? 'N' : 'S'} ${((s.lon + 360) % 360).toFixed(2)}°E</div>
-    ${s.ready ? `<div>${s.blurb}</div>
+    ${s.ready ? `<div>${s.blurb}</div>${s.goal ? `<div style="margin-top:6px">🎯 <b>Science goal:</b> ${s.goal}</div>` : ''}
       ${pick.length ? `<div class="thumbs">${pick.map(p => `<img src="data/${s.id}/photos/${p.file}" alt="${s.rover} sol ${p.sol}" title="${s.rover} · sol ${p.sol} (NASA/JPL-Caltech)">`).join('')}</div>` : ''}
       <div class="kv"><span>Terrain</span><span>HiRISE DTM 1 m · 2.56 × 2.56 km</span><span>Soft soil</span><span>THEMIS night IR + HiRISE albedo</span>
-      <span>Minerals</span><span>CRISM summary products</span><span>Rover photos</span><span>${ph.length} real ${s.rover} images</span>
+      <span>Minerals</span><span>CRISM summary products</span><span>Rover photos</span><span>${s.rover ? `${ph.length} real ${s.rover} images` : 'none: never visited'}</span>
       <span>Local time now</span><span>${clk(t.ltst)} LTST</span></div>
       <a class="btn" href="planner.html?site=${s.id}">Open site planner ▶</a>`
     : `<div class="hint" style="font-size:12px">${s.dtms}. No terrain package yet.</div>

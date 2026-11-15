@@ -66,7 +66,8 @@
     "name": "Dark ripple field below the cliff",
     "why": "Low night-time temperature in THEMIS (low thermal inertia) plus dark, smooth texture: loose sand where a rover can bog down."
    }
-  ]
+  ],
+  "goal": "Sample delta lake sediments that could preserve signs of ancient life."
  },
  "gale": {
   "name": "Gale Crater",
@@ -139,6 +140,229 @@
   "base": [
    -450,
    -240
+  ],
+  "goal": "Measure active dune sand and old lake mudstone at the foot of Mount Sharp."
+ },
+ "jezero_delta": {
+  "name": "Jezero Delta Front",
+  "lat": 18.469,
+  "lon": 77.389,
+  "ready": true,
+  "mission": "Perseverance (Mars 2020) \u00b7 sols 409\u2013836",
+  "rover": "Perseverance",
+  "solEpoch": 52304,
+  "blurb": "The front of the ancient river delta, where Perseverance studied and sampled layered rock in 2022.",
+  "goal": "Trace the carbonate and clay layers of the delta that Perseverance sampled in 2022.",
+  "baseName": "Habitat (delta floor)",
+  "base": [
+   460,
+   640
+  ],
+  "climate": {
+   "src": "MEDA (Perseverance) climatology",
+   "airMin": [
+    -88,
+    -78
+   ],
+   "airMax": [
+    -25,
+    -8
+   ],
+   "gndMax": [
+    2,
+    18
+   ],
+   "tau": 0.55,
+   "press": [
+    6.3,
+    7.8
+   ]
+  },
+  "targets": [
+   {
+    "id": "D1",
+    "x": 440,
+    "z": -360,
+    "on": true,
+    "tag": "CRISM",
+    "name": "Carbonate-bearing layers",
+    "why": "CRISM sees a carbonate signature here. On Earth, carbonates that form in lakes can trap organic matter."
+   },
+   {
+    "id": "D2",
+    "x": -90,
+    "z": -40,
+    "on": true,
+    "tag": "CRISM + THEMIS",
+    "name": "Clay-rich fan sediments",
+    "why": "Fe/Mg clay in CRISM and warm at night in THEMIS: consolidated fine sediment laid down in water."
+   },
+   {
+    "id": "D3",
+    "x": -770,
+    "z": -420,
+    "on": false,
+    "tag": "DTM",
+    "name": "Upper fan viewpoint",
+    "why": "The highest point of the site, ~140 m above the habitat: a view over the whole delta front."
+   },
+   {
+    "id": "D4",
+    "x": 626,
+    "z": 23,
+    "on": false,
+    "tag": "Rover traverse",
+    "name": "Perseverance stop, sol 715",
+    "why": "Where Perseverance parked on sol 715; real rover photos are pinned here."
+   }
+  ]
+ },
+ "gale_boxwork": {
+  "name": "Gale Boxwork",
+  "lat": -4.802,
+  "lon": 137.379,
+  "ready": true,
+  "mission": "Curiosity (MSL) \u00b7 sols 4414\u20134998",
+  "rover": "Curiosity",
+  "solEpoch": 49269,
+  "blurb": "High on Mount Sharp: a web of boxwork ridges that Curiosity explored in 2025.",
+  "goal": "Study the boxwork ridges: mineral veins left by groundwater as Gale dried out.",
+  "baseName": "Habitat (lower bench)",
+  "base": [
+   -540,
+   -770
+  ],
+  "climate": {
+   "src": "REMS (Curiosity) climatology",
+   "airMin": [
+    -90,
+    -75
+   ],
+   "airMax": [
+    -15,
+    0
+   ],
+   "gndMax": [
+    5,
+    20
+   ],
+   "tau": 0.5,
+   "press": [
+    7.3,
+    9.2
+   ]
+  },
+  "targets": [
+   {
+    "id": "B1",
+    "x": 45,
+    "z": 229,
+    "on": true,
+    "tag": "Rover traverse",
+    "name": "Boxwork ridges (Curiosity, 2025)",
+    "why": "Low ridges of cemented rock in a honeycomb pattern, thought to be minerals left by groundwater. Curiosity drove here around sol 4625."
+   },
+   {
+    "id": "B2",
+    "x": 310,
+    "z": 80,
+    "on": true,
+    "tag": "CRISM",
+    "name": "Clay-bearing bench",
+    "why": "Fe/Mg clay signature in CRISM next to the boxwork: compare the rock between the ridges."
+   },
+   {
+    "id": "B3",
+    "x": 1040,
+    "z": 970,
+    "on": false,
+    "tag": "DTM",
+    "name": "Upper Mount Sharp overlook",
+    "why": "~600 m above the habitat. A test of whether the planner says no: most approaches are over 25\u00b0."
+   },
+   {
+    "id": "B4",
+    "x": 90,
+    "z": 1040,
+    "on": false,
+    "tag": "THEMIS + Optical",
+    "name": "Dark sand trough",
+    "why": "Darkest ground and coldest at night: loose sand in a trough between ridges."
+   }
+  ],
+  "mob": "walk"
+ },
+ "mawrth": {
+  "name": "Mawrth Vallis",
+  "lat": 23.859,
+  "lon": -19.03,
+  "ready": true,
+  "mission": "No rover yet \u00b7 former landing-site finalist",
+  "rover": null,
+  "blurb": "One of the most clay-rich places on Mars. Never visited: a scouting site for a future crew.",
+  "goal": "Scout one of the most clay-rich terrains on Mars as a future human landing site.",
+  "baseName": "Habitat (landing zone)",
+  "base": [
+   0,
+   200
+  ],
+  "climate": {
+   "src": "Jezero-like latitude (no surface station here)",
+   "airMin": [
+    -88,
+    -78
+   ],
+   "airMax": [
+    -25,
+    -8
+   ],
+   "gndMax": [
+    2,
+    18
+   ],
+   "tau": 0.5,
+   "press": [
+    6.6,
+    8.2
+   ]
+  },
+  "targets": [
+   {
+    "id": "M1",
+    "x": 100,
+    "z": 670,
+    "on": true,
+    "tag": "Optical",
+    "name": "Light-toned layered rock",
+    "why": "The bright layers of Mawrth Vallis are among the most clay-rich rocks seen from orbit; CRISM coverage here is partial."
+   },
+   {
+    "id": "M2",
+    "x": 880,
+    "z": -30,
+    "on": true,
+    "tag": "CRISM",
+    "name": "Possible carbonate signal",
+    "why": "One of the few CRISM-covered spots in this site shows a carbonate-like index. Worth a closer look."
+   },
+   {
+    "id": "M3",
+    "x": 960,
+    "z": -910,
+    "on": false,
+    "tag": "CRISM",
+    "name": "Olivine-bearing dark cap",
+    "why": "Darker capping rock with an olivine signature, younger than the clay layers below."
+   },
+   {
+    "id": "M4",
+    "x": 910,
+    "z": 910,
+    "on": false,
+    "tag": "THEMIS + Optical",
+    "name": "Dark mantling sand",
+    "why": "Darkest and coldest at night: loose material that a rover should avoid."
+   }
   ]
  },
  "others": [

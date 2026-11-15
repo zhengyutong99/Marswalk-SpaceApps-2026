@@ -19,6 +19,11 @@ Only the needed tiles of each Cloud-Optimized GeoTIFF are streamed (HTTP range r
 Sites:
 - **Jezero**: DTM `DTEEC_045994_1985_046060_1985_U01`, 18.442–18.485°N, 77.415–77.458°E (Perseverance landing site → western delta front). CRISM `FRT000047A3`, `FRT00005C5E`.
 - **Gale**: DTM `DTEEC_018854_1755_018920_1755_U01`, 4.664–4.707°S, 137.366–137.410°E (Bagnold dunes, Murray formation, Marias Pass). CRISM `FRT0000B6F1`, `FRT0000C0EF`.
+- **Jezero delta front**: DTM `DTEEC_002387_1985_003798_1985_A01`, 18.447–18.491°N, 77.368–77.411°E (Perseverance sols 409–836).
+- **Gale boxwork**: DTM `DTEEC_019698_1750_019988_1750_U01`, 4.780–4.824°S, 137.357–137.401°E (Curiosity sols 4414–4998, boxwork ridges).
+- **Mawrth Vallis**: DTM `DTEEC_008469_2040_008825_2040_U01`, 23.837–23.880°N, 340.949–340.992°E (never visited; CRISM covers ~20 % of the crop).
+
+The live Environment panel also reads the latest Curiosity REMS report (mars.nasa.gov weather feed) and NASA DONKI solar energetic particle events (api.nasa.gov, DEMO_KEY).
 
 ## Globe
 - `globe_mola.jpg` – 2048×1024 MOLA elevation colour blended with THEMIS day IR (`Mars_MGS_MolaThemis50BlendPalette`, read from its overview)

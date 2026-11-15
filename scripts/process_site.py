@@ -24,6 +24,12 @@ SITES = {
                    center=(77.43686, 18.46335), landing=(77.4508, 18.4447), themis='mc13_syrtis_major_nir'),
     'gale': dict(folder='ESP_018854_1755_ESP_018920_1755', dtm='DTEEC_018854_1755_018920_1755_U01', ortho='ESP_018854_1755_RED_C_01_ORTHO',
                  center=(137.3880, -4.6850), landing=(137.3880, -4.6850), themis='mc23_aeolis_nir'),
+    'jezero_delta': dict(folder='PSP_002387_1985_PSP_003798_1985', dtm='DTEEC_002387_1985_003798_1985_A01', ortho='PSP_002387_1985_RED_C_01_ORTHO',
+                         center=(77.3893, 18.4690), landing=(77.3893, 18.4690), themis='mc13_syrtis_major_nir'),
+    'gale_boxwork': dict(folder='ESP_019698_1750_ESP_019988_1750', dtm='DTEEC_019698_1750_019988_1750_U01', ortho='ESP_019698_1750_RED_C_01_ORTHO',
+                         center=(137.3790, -4.8020), landing=(137.3790, -4.8020), themis='mc23_aeolis_nir'),
+    'mawrth': dict(folder='PSP_008469_2040_PSP_008825_2040', dtm='DTEEC_008469_2040_008825_2040_U01', ortho='PSP_008469_2040_RED_C_01_ORTHO',
+                   center=(-19.0299, 23.8588), landing=(-19.0299, 23.8588), themis='mc11_oxia_palus_nir'),
 }
 site, outdir, prevdir = sys.argv[1], sys.argv[2], sys.argv[3]
 S = SITES[site]

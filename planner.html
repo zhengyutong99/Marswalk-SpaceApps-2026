@@ -275,6 +275,7 @@
     <div class="site" id="siteCard">
       <h1 id="siteName">—</h1>
       <div class="meta" id="siteMeta"></div>
+      <div class="meta" id="siteGoal" style="margin-top:6px;opacity:1;color:#fff"></div>
       <div class="badges" id="siteBadges"></div>
     </div>
   </div>
@@ -340,6 +341,10 @@
         <div class="card-t"><h2>Sol forecast</h2><span class="r">LTST (local solar time)</span></div>
         <canvas id="envChart" width="700" height="300"></canvas>
         <div class="legend-row"><span><i style="background:#ffb547"></i>air</span><span><i style="background:#ff6b6b"></i>ground</span><span><i style="background:#5cf29a"></i>EVA window</span><span><i style="background:#4fd6ff"></i>your EVA</span></div>
+      </div>
+      <div class="card">
+        <div class="card-t"><h2>Live from NASA</h2><span class="r">real data</span></div>
+        <div class="risks" id="liveNasa"><div class="hint">Loading…</div></div>
       </div>
       <div class="card"><div class="metrics" id="envMetrics"></div><div class="src" id="envSrc"></div></div>
       <div class="card">
@@ -1080,8 +1085,10 @@ function refreshBeacons() {
 
 // site card
 $('siteName').textContent = SITE.name;
-$('siteMeta').innerHTML = `${SITE.mission} · ${Math.abs(SITE.lat).toFixed(2)}°${SITE.lat >= 0 ? 'N' : 'S'} ${SITE.lon.toFixed(2)}°E`;
-$('siteBadges').innerHTML = ['HiRISE DTM 1 m', 'THEMIS IR', 'CRISM', PHOTOS.length ? `${PHOTOS.length} rover photos` : null].filter(Boolean).map(b => `<span class="badge r">${b}</span>`).join('') + '<span class="badge">2.56 × 2.56 km</span><span class="badge">relief ×2 in map</span>';
+$('siteMeta').innerHTML = `${SITE.mission} · ${Math.abs(SITE.lat).toFixed(2)}°${SITE.lat >= 0 ? 'N' : 'S'} ${((SITE.lon + 360) % 360).toFixed(2)}°E`;
+$('siteGoal').innerHTML = SITE.goal ? `🎯 <b>Science goal:</b> ${SITE.goal}` : '';
+const CRISM_COV = CRISM.reduce((a, c) => a + (c > 0), 0) / CRISM.length;
+$('siteBadges').innerHTML = ['HiRISE DTM 1 m', 'THEMIS IR', CRISM_COV < .6 ? `CRISM ${Math.round(CRISM_COV * 100)}% coverage` : 'CRISM', PHOTOS.length ? `${PHOTOS.length} rover photos` : 'no rover yet'].filter(Boolean).map(b => `<span class="badge r">${b}</span>`).join('') + '<span class="badge">2.56 × 2.56 km</span><span class="badge">relief ×2 in map</span>';
 $('siteCard').style.backgroundImage = `linear-gradient(100deg,#120c0af2 35%,#120c0a99 75%,#120c0a55), url(${P}ortho.jpg)`;
 document.title = `Marswalk · ${SITE.name}`;
 // tabs
@@ -1146,7 +1153,8 @@ function drawDayBar() {
    8. Environment tab (Mars clock + sol forecast)
    ========================================================= */
 $('envSite').textContent = SITE.name;
-$('solLbl').textContent = `Sol ${NOW0.sol} · Ls ${Ls.toFixed(0)}°`;
+const solText = n => SITE.solEpoch ? `Sol ${n.sol}` : `MSD ${Math.floor(n.msd)}`;
+$('solLbl').textContent = `${solText(NOW0)} · Ls ${Ls.toFixed(0)}°`;
 function drawEnvChart() {
   const cv = $('envChart'), g = cv.getContext('2d'), w = cv.width, h = cv.height, L = 46, R = 12, T = 14, B = 34;
   const X = t => L + t / 24 * (w - L - R), tmin = Math.floor((T_GND[0] - 5) / 20) * 20, tmax = Math.ceil((T_GND[1] + 5) / 20) * 20, Y = c => T + (1 - (c - tmin) / (tmax - tmin)) * (h - T - B);
@@ -1162,13 +1170,34 @@ function drawEnvChart() {
   const nt = marsNow().ltst; g.strokeStyle = '#ffffffcc'; g.lineWidth = 2; g.beginPath(); g.moveTo(X(nt), T); g.lineTo(X(nt), h - B); g.stroke();
   g.fillStyle = '#fff'; g.textAlign = 'left'; g.fillText('now', X(nt) + 4, T + 14);
 }
+// live NASA data: latest Curiosity REMS weather report + solar energetic particle events from DONKI (space weather)
+async function loadLiveNasa() {
+  const box = $('liveNasa'), rows = [];
+  const row = (lvl, label, val) => `<div class="risk"><i class="dot-${lvl}"></i><span>${label}</span><span class="v">${val}</span></div>`;
+  try {
+    const w = await (await fetch('https://mars.nasa.gov/rss/api/?feed=weather&category=msl&feedtype=json')).json(), d = (w.soles || [])[0];
+    if (d) rows.push(row('g', `🌡 Curiosity REMS, sol ${d.sol} (${d.terrestrial_date})${SITE.rover === 'Curiosity' ? '' : ' · Gale'}`, `air ${d.min_temp}…${d.max_temp} °C · ${d.pressure} Pa`));
+  } catch (e) { rows.push(row('w', '🌡 Curiosity REMS weather', 'unavailable')); }
+  try {
+    const f = x => x.toISOString().slice(0, 10), end = new Date(), start = new Date(Date.now() - 59 * 864e5);
+    const key = 'mw-sep-' + f(end); let sep = null;
+    try { sep = JSON.parse(sessionStorage.getItem(key)); } catch (e) { }
+    if (!sep) { sep = await (await fetch(`https://api.nasa.gov/DONKI/SEP?startDate=${f(start)}&endDate=${f(end)}&api_key=DEMO_KEY`)).json(); try { sessionStorage.setItem(key, JSON.stringify(sep)); } catch (e) { } }
+    if (!Array.isArray(sep)) throw 0;
+    const last = sep[sep.length - 1];
+    rows.push(last ? row('w', `☢ Solar particle events, last 60 days (NASA DONKI)`, `${sep.length} · latest ${last.eventTime.slice(0, 10)}`)
+      : row('g', '☢ Solar particle events, last 60 days (NASA DONKI)', 'none'));
+  } catch (e) { rows.push(row('w', '☢ NASA DONKI space weather', 'unavailable')); }
+  box.innerHTML = rows.join('') + '<div class="src">Reports lag a few days. The SPE button and shelter drill test what you would do if one arrived.</div>';
+}
+loadLiveNasa();
 function updateNow() {
   const n = marsNow();
   $('nowClock').textContent = fmtClock(n.ltst);
   $('nowSub').textContent = `LTST · ${seasonName} (Ls ${n.Ls.toFixed(0)}°) · sun ${(sunAt(n.ltst).el / D2R).toFixed(0)}°`;
   $('nowTemp').textContent = airTemp(n.ltst).toFixed(0) + ' °C';
-  $('envSol').textContent = `Sol ${n.sol}`;
-  $('envSol').title = `${SITE.rover} mission sol · Mars Sol Date ${Math.floor(n.msd)}`;
+  $('envSol').textContent = solText(n);
+  $('envSol').title = SITE.rover ? `${SITE.rover} mission sol · Mars Sol Date ${Math.floor(n.msd)}` : 'Mars Sol Date';
 }
 $('envMetrics').innerHTML = [['Sunrise', fmtClock(SUNRISE)], ['Sunset', fmtClock(SUNSET)], ['Daylight', fmtT(SUNSET - SUNRISE) + ' h'],
   ['Air temp', `${T_AIR[0].toFixed(0)} … ${T_AIR[1].toFixed(0)}°`], ['Ground max', `${T_GND[1].toFixed(0)} °C`], ['Dust τ', TAU.toFixed(2)],
@@ -1728,8 +1757,9 @@ function printCard(report) {
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>EVA card · ${SITE.name}</title><style>
     body{font:13px/1.5 -apple-system,system-ui,sans-serif;margin:28px;color:#111} h1{margin:0 0 4px} .s{color:#666} img{width:100%;border-radius:8px;margin:12px 0}
     table{border-collapse:collapse;width:100%} td{border-bottom:1px solid #ddd;padding:5px 6px} td:first-child{color:#555;width:38%} ol{padding-left:20px}
-  </style></head><body><h1>EVA card · ${SITE.name}</h1><div class="s">Marswalk planner · Sol ${NOW0.sol} (${SITE.rover} count) · Ls ${Ls.toFixed(0)}° · printed ${new Date().toISOString().slice(0, 10)}</div>
+  </style></head><body><h1>EVA card · ${SITE.name}</h1><div class="s">Marswalk planner · ${SITE.solEpoch ? `Sol ${NOW0.sol} (${SITE.rover} count)` : `MSD ${Math.floor(NOW0.msd)}`} · Ls ${Ls.toFixed(0)}° · printed ${new Date().toISOString().slice(0, 10)}</div>
   ${img ? `<img src="${img}">` : ''}
+  ${SITE.goal ? `<p><b>Science goal:</b> ${SITE.goal}</p>` : ''}
   <table>${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>
   <h3>Stops</h3><ol>${r.stops.map((t, i) => `<li><b>${t.id} ${t.name}</b> · arrive ~${fmtClock(evaStart + r.stopT[i] / SOL_H)} LTST — ${t.why}</li>`).join('')}<li>Return to ${BASE.name} by ${fmtClock(evaStart + r.time / SOL_H)}</li></ol>
   <p><b>Payload:</b> ${PAYLOAD[payload].long} · <b>Share link:</b> ${shareURL()}</p>
@@ -1815,6 +1845,7 @@ if (qs.has('stops')) {
     else { const t = targets.find(t => t.id === tok); if (t) t.on = true; }
   });
 }
+if (MOBILITY[SITE.mob]) mob = SITE.mob;   // e.g. boxwork: too rough for the rover
 if (MOBILITY[qs.get('mob')]) mob = qs.get('mob');
 if (PROFILES[qs.get('prof')]) curProfile = qs.get('prof');
 if (PAYLOAD[qs.get('pay')]) payload = qs.get('pay');
