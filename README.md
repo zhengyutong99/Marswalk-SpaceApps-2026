@@ -56,7 +56,7 @@ scripts/
   globe.py          global textures
 ```
 
-`data/README.md` lists every source product and the commands to regenerate the data.
+`data/README.md` lists every source product and the commands to regenerate the data. `docs/PROJECT.md` explains how the project maps to the challenge.
 
 ## Credits
 
