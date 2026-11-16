@@ -4,6 +4,18 @@ NASA Space Apps Challenge 2026 · *Interplanetary Survival Guide: Martian Map*
 
 Marswalk helps an astronaut and their rover partner plan a safe excursion (EVA) on real Martian terrain, then rehearse it in first person through a helmet HUD.
 
+**▶ [Play it in your browser](https://zhengyutong99.github.io/Marswalk-SpaceApps-2026/)** (desktop Chrome, Edge or Firefox; no install) · **🎬 [Watch the 30-second demo](https://zhengyutong99.github.io/Marswalk-SpaceApps-2026/docs/media/marswalk-demo-30s.mp4)**
+
+![First-person rehearsal at ×100 speed: the route, hazard minimap and a science stop](docs/media/rehearsal.gif)
+
+| Pick a site | Plan: rover or walk, GO / NO-GO |
+|---|---|
+| ![3D Mars globe with the five sites](docs/media/globe.jpg) | ![Planner with the route and the GO verdict](docs/media/plan.jpg) |
+| **Data layers: THEMIS night-time heat (loose sand)** | **Debrief: plan vs actual** |
+| ![Thermal inertia layer draped on the terrain](docs/media/layers.jpg) | ![EVA debrief with grade A](docs/media/debrief.jpg) |
+
+**Quick try:** open the link → click **Gale Boxwork** → **Open site planner** → **Rehearse EVA in first person** → press **P** (autopilot) and **T** three times (×100 speed).
+
 1. **Pick a site** on a 3D Mars globe (`index.html`).
 2. **Plan** in the site planner (`planner.html?site=jezero`, `gale`, `jezero_delta`, `gale_boxwork` or `mawrth`): choose science stops, rover or walking, and a start time. The A* route planner shows distance, duration, O₂ margin, radiation dose, risk of getting stuck in sand, comms blackout, and the walk-back limit, then gives a GO / CAUTION / NO-GO verdict.
 3. **Rehearse** the route in first person, with day and night, shadows, hazards and resource limits, or drop the pegman anywhere for a free street-view preview. Each rehearsal ends with a debrief and score.
